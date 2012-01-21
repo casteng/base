@@ -141,8 +141,8 @@ end;
 procedure CheckParentSize(AControl: TControl);
 begin
   if Assigned(AControl.Parent) then begin
-    AControl.Parent.Width  := MaxI(AControl.Parent.Width,  AControl.Constraints.MinWidth);
-    AControl.Parent.Height := MaxI(AControl.Parent.Height, AControl.Constraints.MinHeight);
+    AControl.Parent.Width  := MinI(AControl.Parent.Width,  AControl.Constraints.MinWidth);
+    AControl.Parent.Height := MinI(AControl.Parent.Height, AControl.Constraints.MinHeight);
   end;
 end;
 

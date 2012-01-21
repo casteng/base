@@ -42,3 +42,6 @@
   {$INLINE ON}
 {$ENDIF}
 
+{$IFOPT D+}
+  {$DEFINE DEBUG}
+{$ENDIF}

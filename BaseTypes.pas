@@ -40,6 +40,9 @@ type
   // 8-bit unsigned 
   Nat8  = Byte;
 
+    // Platform dependent basic types
+  IntNative = Integer;
+
 const
   // Max and mins for signed
   MaxInt32: Int32 =  $7FFFFFFF;
@@ -114,6 +117,8 @@ type
     // Line number in source file
     LineNumber: Integer;
   end;
+  // Stack trace
+  TBaseStackTrace = array of TCodeLocation;
 
   // Pointer to a two-dimensional vector
   PVector2s = ^TVector2s;
@@ -332,16 +337,25 @@ const
   // Converts int to string
   function IntToStr(v: Integer): string;
 
+  // Returns base pointer shifted by offset
+  function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
+
   // Returns filled code location structure
   function GetCodeLoc(const ASourceFilename, AUnitName, AProcedureName: string; ALineNumber: Integer; AAddress: Pointer): TCodeLocation;
 
   // Converts code location to a readable string
   function CodeLocToStr(const CodeLoc: TCodeLocation): string;
 
-  // Used internally to make AssertErrorProc based features thread safe
-  procedure AssertLock();
-  // Used internally to make AssertErrorProc based features thread safe
-  procedure AssertUnlock();
+  { Replaces assert error procedure with the specified one.
+    Old assert error procedure is save to be restored with AssertRestore.
+    Returns True if hook successful or False otherwise.
+    Used internally for Assert-based features.
+    Thread safe MULTITHREADASSERT defined. }
+  function AssertHook(NewAssertProc: TAssertErrorProc): Boolean;
+  { Restores assert error procedure changed by AssertHook.
+    Used internally for Assert-based features.
+    Thread safe if MULTITHREADASSERT defined. }
+  procedure AssertRestore();
 
 implementation
 
@@ -426,7 +440,7 @@ asm
 end;
 {$ENDIF}
 
-procedure Rect(ALeft, ATop, ARight, ABottom: Integer; out Result: TRect); overload;
+procedure Rect(ALeft, ATop, ARight, ABottom: Integer; out Result: TRect);
 begin
   with Result do begin
     Left := ALeft; Top := ATop;
@@ -513,6 +527,12 @@ begin
   Result := string(s);
 end;
 
+function PtrOffs(Base: Pointer; Offset: Integer): Pointer; {$I inline.inc}
+begin
+  Result := Base;
+  Inc(PByte(Result), Offset);
+end;
+
 function IFF(Cond: Boolean; const ResTrue, ResFalse: string): string; overload; {$I inline.inc}
 begin
   if Cond then Result := ResTrue else Result := ResFalse;
@@ -543,20 +563,27 @@ begin
           + IFF(CodeLoc.LineNumber > 0, IntToStr(CodeLoc.LineNumber), '-') + ')';
 end;
 
-{$IFDEF MULTITHREADASSERT}
-  var
+var
+  StoredAssertProc: TAssertErrorProc = nil;
+  {$IFDEF MULTITHREADASSERT}
     AssertCriticalSection: TCriticalSection;
-{$ENDIF}
+  {$ENDIF}
 
-procedure AssertLock();
+function AssertHook(NewAssertProc: TAssertErrorProc): Boolean;
 begin
+  Assert(@StoredAssertProc = nil, 'Assert already hooked');
   {$IFDEF MULTITHREADASSERT}
     AssertCriticalSection.Enter();
   {$ENDIF}
+  StoredAssertProc := AssertErrorProc;
+  AssertErrorProc  := NewAssertProc;
+  Result := True;
 end;
 
-procedure AssertUnlock();
+procedure AssertRestore();
 begin
+  AssertErrorProc := StoredAssertProc;
+  StoredAssertProc := nil;
   {$IFDEF MULTITHREADASSERT}
     AssertCriticalSection.Leave();
   {$ENDIF}

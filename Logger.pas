@@ -55,7 +55,11 @@ type
   // Abstract log appender
   TAppender = class(TObject)
   public
-    // Creates the appender with the specified log levels
+    // Format pattern for log timestamp. If empty no timestamps will be appended.
+    TimeFormat: string;
+    { Default appender constructor.
+      Creates the appender of the specified log levels, initializes TimeFormat and Formatter to default values
+      and registers the new appender in log system. }
     constructor Create(ALevels: TLogLevels);
   protected
     // Should be overridden to actually append log
@@ -75,15 +79,20 @@ type
   // Calls all registered appenders to log the string
   procedure Log(const Str: string; Level: TLogLevel = lkInfo); overload;
   // Calls all registered appenders to log the string with source location information
-  procedure Log(const Str: string; SrcLoc: TCodeLocation; Level: TLogLevel = lkInfo); overload;
+  procedure Log(const Str: string; const CodeLoc: TCodeLocation; Level: TLogLevel = lkInfo); overload;
   // Calls all registered appenders to log the fatal error
-  procedure Fatal(const Str: string);
+  procedure LogFatal(const Str: string);
   // Calls all registered appenders to log the error
-  procedure Error(const Str: string);
+  procedure LogError(const Str: string);
   // Calls all registered appenders to log the warning
-  procedure Warning(const Str: string);
+  procedure LogWarning(const Str: string);
   // Calls all registered appenders to log the notice
-  procedure Notice(const Str: string);
+  procedure LogNotice(const Str: string);
+  // Calls all registered appenders to log the debug message
+  procedure LogDebug(const Str: string);
+
+  // Prints to log the specified stack trace which can be obtained by some of BaseDebug unit routines
+  procedure LogStackTrace(const StackTrace: TBaseStackTrace);
 
   { A special function-argument. Should be called ONLY as Assert() argument.
     Allows to log source file name and line number at calling location.
@@ -158,13 +167,15 @@ uses
 
 constructor TAppender.Create(ALevels: TLogLevels);
 begin
+  TimeFormat := 'dd"/"mm"/"yyyy hh":"nn":"ss"."zzz  ';
   LogLevels  := ALevels;
   FFormatter := GetPreparedStr;
+  AddAppender(Self);
 end;
 
 function TAppender.GetPreparedStr(const Time: TDateTime; const Str: string; CodeLoc: PCodeLocation; Level: TLogLevel): string;
 begin
-  Result := FormatDateTime('dd"/"mm"/"yyyy hh":"nn":"ss"."zzz  ', Now()) + lkPrefix[Level] + Str;
+  Result := FormatDateTime(TimeFormat, Now()) + lkPrefix[Level] + Str;
   if (CodeLoc <> nil) then
     Result := Concat(Result, ' --- ', CodeLocToStr(CodeLoc^));
 end;
@@ -197,17 +208,29 @@ begin
   {$ENDIF}
 end;
 
+const EmptyCodeLoc: TCodeLocation = (Address: nil; SourceFilename: ''; UnitName: ''; ProcedureName: ''; LineNumber: -1);
+
 procedure Log(const Str: string; Level: TLogLevel = lkInfo);
-{$IFDEF LOGGING} var i: Integer; Time: TDateTime; {$ENDIF}
+begin
+  Log(Str, EmptyCodeLoc, Level);
+end;
+
+procedure Log(const Str: string; const CodeLoc: TCodeLocation; Level: TLogLevel = lkInfo); overload;
+{$IFDEF LOGGING} var i: Integer; Time: TDateTime; SrcLocPtr: PCodeLocation; {$ENDIF}
 begin
   {$IFDEF LOGGING}
   Lock();
+
+  if CodeLoc.LineNumber = -1 then
+    SrcLocPtr := nil
+  else
+    SrcLocPtr := @CodeLoc;
 
   Time := Now;
 
   for i := 0 to High(FAppenders) do
     if Level in FAppenders[i].LogLevels then
-      FAppenders[i].AppendLog(Time, Str, nil, Level);
+      FAppenders[i].AppendLog(Time, Str, SrcLocPtr, Level);
 
   UnLock();
 
@@ -215,46 +238,39 @@ begin
   {$ENDIF}
 end;
 
-procedure Log(const Str: string; SrcLoc: TCodeLocation; Level: TLogLevel = lkInfo); overload;
-{$IFDEF LOGGING} var i: Integer; Time: TDateTime; {$ENDIF}
-begin
-  {$IFDEF LOGGING}
-  Lock();
-
-  Time := Now;
-
-  for i := 0 to High(FAppenders) do
-    if Level in FAppenders[i].LogLevels then
-      FAppenders[i].AppendLog(Time, Str, @SrcLoc, Level);
-
-  UnLock();
-
-  Inc(LogLevelCount[Level]);
-  {$ENDIF}
-end;
-
-procedure Fatal(const Str: string);
+procedure LogFatal(const Str: string);
 begin
   {$IFDEF LOGGING} Log(Str, lkFatalError); {$ENDIF}
 end;
 
-procedure Error(const Str: string);
+procedure LogError(const Str: string);
 begin
   {$IFDEF LOGGING} Log(Str, lkError); {$ENDIF}
 end;
 
-procedure Warning(const Str: string);
+procedure LogWarning(const Str: string);
 begin
   {$IFDEF LOGGING} Log(Str, lkWarning); {$ENDIF}
 end;
 
-procedure Notice(const Str: string);
+procedure LogNotice(const Str: string);
 begin
   {$IFDEF LOGGING} Log(Str, lkNotice); {$ENDIF}
 end;
 
+procedure LogDebug(const Str: string);
+begin
+  {$IFDEF LOGGING} Log(Str, lkDebug); {$ENDIF}
+end;
+
+procedure LogStackTrace(const StackTrace: TBaseStackTrace);
+var i: Integer;
+begin
+  for i := 0 to High(StackTrace) do
+    Log(' --- ' + IntToStr(i) + '. ' + CodeLocToStr(StackTrace[i]));
+end;
+
 var
-  StoredAssertProc: TAssertErrorProc = nil;
   AssertLogLevel: TLogLevel;
 
 {$IFDEF FPC}
@@ -264,9 +280,7 @@ var
 {$ENDIF}
 var CodeLocation: TCodeLocation;
 begin
-  AssertErrorProc := StoredAssertProc;
-  StoredAssertProc := nil;
-  AssertUnlock();
+  AssertRestore();
 
   CodeLocation := GetCodeLoc(Filename, '', '', LineNumber, ErrorAddr);
 
@@ -275,18 +289,27 @@ end;
 
 function _Log(Level: TLogLevel = lkInfo): Boolean;
 begin
-  Assert(@StoredAssertProc = nil, '_Log() can be used only as Assert() argument');
+  if AssertHook(@LogAssert) then begin
+    AssertLogLevel := Level;
+    Result := False;
+  end else
+    Result := True;  // Prevent assertion error if hook failed
+end;
 
-  AssertLock();
-  AssertLogLevel   := Level;
-  StoredAssertProc := AssertErrorProc;
-  AssertErrorProc  := @LogAssert;
-  Result := False;
+// Returns index of the appender or -1 if not found
+function IndexOfAppender(Appender: TAppender): Integer;
+begin
+  Result := High(FAppenders);
+  while (Result >= 0) and (FAppenders[Result] <> Appender) do Dec(Result);
 end;
 
 procedure AddAppender(Appender: TAppender);
 begin
   if not Assigned(Appender) then Exit;
+  if IndexOfAppender(Appender) >= 0 then begin
+    Log('Duplicate appender of class "' + Appender.ClassName + '"', lkWarning);
+    Exit;
+  end;
   Lock();
   SetLength(FAppenders, Length(FAppenders)+1);
   // Set default formatter
@@ -298,12 +321,9 @@ end;
 procedure RemoveAppender(Appender: TAppender);
 var i: Integer;
 begin
-  // Find appender
-  i := 0;
-  while (i <= High(FAppenders)) and (FAppenders[i] <> Appender) do Inc(i);
-
+  i := IndexOfAppender(Appender);
   // if found, replace it with last and resize array
-  if i <= High(FAppenders) then begin
+  if i >= 0 then begin
     Lock();
     FAppenders[i] := FAppenders[High(FAppenders)];
     SetLength(FAppenders, Length(FAppenders)-1);
@@ -323,6 +343,7 @@ begin
     Result := nil;
 end;
 
+{$WARN SYMBOL_PLATFORM OFF}
 procedure AddDefaultAppenders();
 begin
   {$IFDEF WINDOWS}{$IFDEF DELPHI}
@@ -386,9 +407,6 @@ end;
 
 constructor TFileAppender.Create(const Filename: string; ALevels: TLogLevels);
 begin
-  LogLevels  := ALevels;
-  FFormatter := GetPreparedStr;
-
   if (Pos(':', Filename) > 0) or (Pos('/', Filename) = 1) then
     AssignFile(LogFile, Filename)
   else
@@ -398,6 +416,8 @@ begin
   Rewrite(LogFile);
   CloseFile(LogFile);
   //if IOResult <> 0 then LogLevels := [];
+
+  inherited Create(ALevels);
 end;
 
 procedure TFileAppender.AppendLog(const Time: TDateTime; const Str: string; CodeLoc: PCodeLocation; Level: TLogLevel);
@@ -417,7 +437,7 @@ initialization
   FillChar(LogLevelCount, SizeOf(LogLevelCount), 0);
   AddDefaultAppenders();
 finalization
-  Notice('Log session shutdown');
+  LogNotice('Log session shutdown');
   Log('Logged fatal errors: ' + IntToStr(LogLevelCount[lkFatalError])
     + ', errors: ' + IntToStr(LogLevelCount[lkError])
     + ', warnings: ' + IntToStr(LogLevelCount[lkWarning])

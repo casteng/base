@@ -13,6 +13,8 @@ interface
 uses SysUtils, BaseTypes;
 
 const
+  // New line character sequence
+  NEW_LINE_SEQ = {$IFDEF WINDOWS}#13#10{$ELSE}#10{$ENDIF};
   // Locale independent decimal separator
   GeneralDecimalSeparator: Char = '.';
   // Delimiter which separate strings in enumerations

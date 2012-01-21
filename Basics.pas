@@ -252,8 +252,6 @@ type
   function BitTest(Data: Cardinal; BitIndex: Byte): Boolean;
   function InterleaveBits(x, y: Smallint): Integer;
 
-  function PtrOffs(Base: Pointer; Offset: Integer): Pointer;
-
   // Returns color max component value
   function GetColor4SIntensity(const Color: TColor4s): Single;
 
@@ -628,12 +626,6 @@ y = (y | (y << S[1])) & B[1];
 y = (y | (y << S[0])) & B[0];
 
 z = x | (y << 1);}
-end;
-
-function PtrOffs(Base: Pointer; Offset: Integer): Pointer;
-begin
-  Result := Base;
-  Inc(PByte(Result), Offset);
 end;
 
 function GetColor4SIntensity(const Color: TColor4s): Single;

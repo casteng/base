@@ -4,7 +4,7 @@ program test;
 
 //uses sysutils;
 uses 
-  SysUtils, BaseDebug, Logger, BaseTypes;
+  SysUtils, BaseDebug, Logger, BaseTypes, BaseStr;
 
 {procedure VarDispDebugHandler(Result: PVariant; const Instance: Variant;
   CallDesc: PCallDesc; Params: Pointer); cdecl;
@@ -13,26 +13,31 @@ begin
   Result^ := 11;
 end;}
 
+procedure Test3;
+begin
+  Assert(_Log(lkNotice), 'Test 3');
+  raise Exception.Create('My exception');
+end;
+
 
 procedure Test2;
-var func, source: shortstring; line: longint;
+var 
+  func, source: shortstring; line: longint;
+  cl: TCodeLocation;
 begin
   try
-    raise Exception.Create('My exception');
+    Test3;
   except
-    on E: Exception do Writeln(E.Message);
+    on E: Exception do begin
+      raise Exception.Create('My exception');
+    end;
   end;
 
-  Assert(_CodeLoc);
-  Log('Assert at ' + CodeLocToStr(LastCodeLoc));
-  LastCodeLoc.Address := ExceptAddr;
+//  Assert(_CodeLoc); cl := LastCodeLoc;
+  
+  cl.Address := ExceptAddr;
   Assert(_Log(lkWarning), 'Logging with line number info');
 //  Assert(False, 'true assert');
-  if getLineInfo(ptruint(LastCodeLoc.Address),  func, source, line) then
-    Writeln('File name: ' + Source + ', line: ', Line)
-  else
-    Writeln('No source info for ', HexStr(ptruint(LastCodeLoc.Address), 8));
-
 end;
 
 //var a: Variant;  i: Integer;
@@ -41,8 +46,17 @@ begin
 //  a := IUnknown(TInterfacedObject.Create());
 //  VarDispProc := @VarDispDebugHandler;
 //  i := a.doSomething($20);
+  
   AddAppender(TFileAppender.Create('test.log', llFull));
-  Test2();
+
+  try
+    Test2();
+  except
+    on E: Exception do begin
+      Fatal('Stack trace: '+NEW_LINE_SEQ+GetStackTraceStr(GetExceptionStackTrace()));
+    end;
+  end;
+  
   Writeln('Finished OK');
 end.
 

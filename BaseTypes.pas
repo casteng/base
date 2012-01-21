@@ -67,6 +67,9 @@ type
   // Type for time values
   TTimeUnit = Double;
 
+  // Command - parameterless procedure method
+  TCommand = procedure() of object;
+
   {$IFNDEF UNICODE}
   // Unicode string type
   UnicodeString = WideString;

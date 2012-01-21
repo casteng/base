@@ -76,9 +76,9 @@ LocaleToUnicode=1
 ImagebaseMultiple=1
 SuspiciousTypecast=1
 PrivatePropAccessor=1
-UnsafeType=1
-UnsafeCode=1
-UnsafeCast=1
+UnsafeType=0
+UnsafeCode=0
+UnsafeCast=0
 [Linker]
 MapFile=0
 OutputObjs=0
@@ -94,7 +94,7 @@ OutputDir=bin
 UnitOutputDir=temp
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=
+SearchPath=..;../../JCL/source/windows;..\..\JCL\source\include;../..\JCL\source\common
 Packages=vcl;rtl;vclx;vclactnband;vclshlctrls;vclie;xmlrtl;inetdbbde;inet;inetdbxpress;dbrtl;vcldb;adortl;bdertl;vcldbx;VclSmp;PNG_D7;VirtualTreesD7
 Conditionals=
 DebugSourceDirs=
@@ -130,6 +130,10 @@ z:\Delphi\Lite7\Bin\dbx70.bpl=Borland SQL Explorer UI Package
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
+[HistoryLists\hlSearchPath]
+Count=2
+Item0=..;../../JCL/source/windows;..\..\JCL\source\include;../..\JCL\source\common
+Item1=..
 [HistoryLists\hlUnitOutputDirectory]
 Count=1
 Item0=temp

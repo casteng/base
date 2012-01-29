@@ -29,7 +29,7 @@ Usage - once per unit:
   _LinkedListDelegate = function(const e: _LinkedListValueType; Data: Pointer): Boolean of object;
   {$I _Dg.inc} = _LinkedListDelegate;
   _IGenLinkedList = interface
-    {$MESSAGE 'Instantiating _IGenVector interface for a template linked list type'}
+    {$IFDEF TEMPLATE_HINTS}{$MESSAGE 'Instantiating _IGenVector interface for a template linked list type'}{$ENDIF}
     {$I gen_coll_list.inc}
   end;
 
@@ -54,7 +54,7 @@ Usage - once per unit:
     Not thread safe.
   }
   _GenLinkedList = class(TTemplateInterface, _IGenLinkedList)
-  protected
+  {$IFDEF HAS_STRICT}strict{$ENDIF} protected
     FFirst, FLast: _LinkedListNodePTR;
     FCount: __CollectionIndexType;
 

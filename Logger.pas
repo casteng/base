@@ -348,14 +348,14 @@ procedure AddDefaultAppenders();
 begin
   {$IFDEF WINDOWS}{$IFDEF DELPHI}
     if DebugHook > 0 then
-      AddAppender(TWinDebugAppender.Create(llFull));
+      TWinDebugAppender.Create(llFull);
   {$ENDIF}{$ENDIF}
 
   if IsConsole then begin
     if Length(FAppenders) = 0 then
-      AddAppender(TSysConsoleAppender.Create(llFull))
+      TSysConsoleAppender.Create(llFull)
     else
-      AddAppender(TSysConsoleAppender.Create([lkWarning, lkError, lkFatalError]))
+      TSysConsoleAppender.Create([lkWarning, lkError, lkFatalError])
   end;
 end;
 

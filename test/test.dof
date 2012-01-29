@@ -94,7 +94,7 @@ OutputDir=bin
 UnitOutputDir=temp
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=..;../../JCL/source/windows;..\..\JCL\source\include;../..\JCL\source\common
+SearchPath=..;../../JCL/source/windows;..\..\JCL\source\include;../..\JCL\source\common;../template
 Packages=vcl;rtl;vclx;vclactnband;vclshlctrls;vclie;xmlrtl;inetdbbde;inet;inetdbxpress;dbrtl;vcldb;adortl;bdertl;vcldbx;VclSmp;PNG_D7;VirtualTreesD7
 Conditionals=
 DebugSourceDirs=
@@ -131,9 +131,8 @@ z:\Delphi\Lite7\Bin\dbx70.bpl=Borland SQL Explorer UI Package
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=2
-Item0=..;../../JCL/source/windows;..\..\JCL\source\include;../..\JCL\source\common
-Item1=..
+Count=1
+Item0=..;../../JCL/source/windows;..\..\JCL\source\include;../..\JCL\source\common;../template
 [HistoryLists\hlUnitOutputDirectory]
 Count=1
 Item0=temp

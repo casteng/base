@@ -1,5 +1,7 @@
 {$Include base.inc}
 
+{/$DEFINE TEMPLATE_HINTS}        // Turns on compiler hints when instantiating template classes
+
 {.$DEFINE USEFASTMM}             // Use FastMM memory manager
 {.$DEFINE PUREPASCAL}           // Turns off any assembler optimizations
 

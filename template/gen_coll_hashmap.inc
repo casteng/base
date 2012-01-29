@@ -5,7 +5,7 @@ Usage - once per unit:
   type
     _HashMapKeyType = <some type>;
     _HashMapValueType = <some type>;
-    $I gen_coll_hashmap.inc}
+    {$I gen_coll_hashmap.inc}
 
     T<xxx><yyy>HashMap = class(_GenHashMap)
     end;
@@ -27,11 +27,11 @@ Usage - once per unit:
        Result := Value1 = Value2;
      end;]
 
-    $I gen_coll_hashmap.inc}
+    {$I gen_coll_hashmap.inc}
 
-  a compiler message with explanation which type is being instantiated would be very helpful:
-  $MESSAGE 'Instantiating TStringIntegerHashMap'
-  $I gen_coll_hashmap.inc}
+  // a compiler message with explanation which type is being instantiated would be very helpful:
+  {$MESSAGE 'Instantiating TStringIntegerHashMap'}
+  {$I gen_coll_hashmap.inc}
 *)
 
 {$IFNDEF _HASHMAPIMPL}     // Interface
@@ -56,7 +56,7 @@ Usage - once per unit:
   _HashMapKeys = array of _HashMapValueRec;
 
   _GenHashMap = class
-  protected
+  {$IFDEF HAS_STRICT}strict{$ENDIF} protected
     FValues: _HashMapKeys;
     // Capacity of the hash map. Should be a power of 2.
     FCapacity,

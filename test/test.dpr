@@ -4,20 +4,26 @@ program test;
 
 //uses sysutils;
 uses
-  SysUtils, BaseDebug, Logger, BaseTypes, BaseStr, BaseRTTI;
+  SysUtils, BaseDebug, Logger, BaseTypes, BaseStr, BaseRTTI, Tester;
 
 type
   {$M+}
-  TestClass = class(TObject)
+  CTestClass = class of TestClass;
+  TestClass = class(TTestSuite)
   private
     fb: string;
     Fa: Integer;
     procedure Seta(const Value: Integer);
   published
-    procedure Cmd();
-    property a: Integer read Fa write Seta;
-    property b: string read fb write fb;
+    procedure Test1();
+    procedure Test2();
   end;
+
+  TestClass2 = class(TestClass)
+  published
+    procedure Test1();
+  end;
+
 
 {procedure VarDispDebugHandler(Result: PVariant; const Instance: Variant;
   CallDesc: PCallDesc; Params: Pointer); cdecl;
@@ -28,11 +34,6 @@ end;}
 
 { TestClass }
 
-procedure TestClass.Cmd;
-begin
-  Log('Cmd invoked');
-end;
-
 procedure TestClass.Seta(const Value: Integer);
 begin
   Fa := Value;
@@ -40,8 +41,28 @@ end;
 
 var
   i: Integer;
-  Props: TRTTINames;
+  Props, Methods: TRTTINames;
   testc: TestClass;
+  testcr: CTestClass;
+
+procedure TestClass.Test1;
+begin
+  Log('TestClass.Test1 invoked');
+end;
+
+procedure TestClass.Test2;
+begin
+  Log('TestClass.Test2 invoked');
+  Assert(_Check(False), 'Test2');
+end;
+
+{ TestClass2 }
+
+procedure TestClass2.Test1;
+begin
+  Log('TestClass2.Test1 invoked');
+  raise Exception.Create('Exception!');
+end;
 
 begin
 //  a := IUnknown(TInterfacedObject.Create());
@@ -50,12 +71,22 @@ begin
 
   //AddAppender(TFileAppender.Create('test.log', llFull));
 
-  testc := TestClass.Create;
+{  testc := TestClass2.Create;
 
-  Props := GetClassProperties(TestClass);
+  testcr := TestClass2;
+
+  Props := GetClassProperties(TestClass2);
   for i := 0 to High(Props) do Log('Property: ' + Props[i]);
-  InvokeCommand(testc, 'Cmd');
+  //Methods := GetInstanceMethods(TObject(testcr));
+  Methods := GetClassMethods(testc.ClassType, True);
+  for i := 0 to High(Methods) do Log('Method: ' + Methods[i]);
+
+  InvokeCommand(testc, 'Cmd');}
+
+  SetRunner(TLogTestRunner.Create);
+  RunTests([TestClass2, TestClass]);
 
   Writeln('Finished OK');
+  readln;
 end.
 

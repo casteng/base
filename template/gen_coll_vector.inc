@@ -5,13 +5,15 @@
 Usage:
   type
     _VectorValueType = <some type>;
-    $I gen_coll_vector.inc}
+    {$I gen_coll_vector.inc}
 
     T<xxx>Vector = _GenVector;
 
   implementation
 
-    $I gen_coll_vector.inc}
+    // a compiler message with explanation which type is being instantiated would be very helpful:
+    {$MESSAGE 'Instantiating TStringIntegerHashMap'}
+    {$I gen_coll_vector.inc}    
 *)
 
 {$IF Declared(_VectorOptions)}
@@ -29,7 +31,7 @@ Usage:
   _VectorDelegate = function(const e: _VectorValueType; Data: Pointer): Boolean of object;
   {$I _Dg.inc} = _VectorDelegate;
   _IGenVector = interface
-    {$MESSAGE 'Instantiating _IGenVector interface for a template vector type'}
+    {$IFDEF TEMPLATE_HINTS}{$MESSAGE 'Instantiating _IGenVector interface for a template vector type'}{$ENDIF}
     {$I gen_coll_list.inc}
   end;
   // Advance template type instance counter to reuse it in other template collection classes
@@ -37,7 +39,7 @@ Usage:
   {$I _T.inc}
 
   _GenVector = class(TTemplateInterface, _IGenVector)
-  protected
+  {$IFDEF HAS_STRICT}strict{$ENDIF} protected
     // Values container
     FValues: array of _VectorValueType;
     // Current capacity of the vector

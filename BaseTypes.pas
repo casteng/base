@@ -100,6 +100,9 @@ type
   // Message flag set
   TMessageFlags = set of TMessageFlag;
 
+  // Array of classes
+  TClasses = array of TClass;
+
   // General method pointer
   TDelegate = procedure(Data: Pointer) of object; 
   // Method pointer used by time-consuming routines to report progess in range [0..1]
@@ -349,6 +352,11 @@ const
   // Converts code location to a readable string
   function CodeLocToStr(const CodeLoc: TCodeLocation): string;
 
+  // Returns True if AClass equals or descends from one of classes from the AClasses
+  function IsClassFrom(AClass: TClass; AClasses: TClasses): Boolean;
+  // Constructs TClasses array from array of classes
+  function TClassesFromArrayOf(AClasses: array of TClass): TClasses;
+
   { Replaces assert error procedure with the specified one.
     Old assert error procedure is save to be restored with AssertRestore.
     Returns True if hook successful or False otherwise.
@@ -564,6 +572,21 @@ begin
   Result := IFF(CodeLoc.UnitName <> '', CodeLoc.UnitName + '.', '') + CodeLoc.ProcedureName
           + '(' + IFF(CodeLoc.SourceFilename <> '', CodeLoc.SourceFilename, 'Unknown source') + ':'
           + IFF(CodeLoc.LineNumber > 0, IntToStr(CodeLoc.LineNumber), '-') + ')';
+end;
+
+function IsClassFrom(AClass: TClass; AClasses: TClasses): Boolean;
+var i: Integer;
+begin
+  i := High(AClasses);
+  while (i >= 0) and not (AClass.InheritsFrom(AClasses[i])) do Dec(i);
+  Result := i >= 0;
+end;
+
+function TClassesFromArrayOf(AClasses: array of TClass): TClasses;
+var i: Integer;
+begin
+  SetLength(Result, Length(AClasses));
+  for i := 0 to High(AClasses) do Result[i] := AClasses[i];
 end;
 
 var

@@ -3,7 +3,7 @@
   (C) George Bakhtadze
 Usage:
 --------------------------
-  procedure/function <Name>(Count: Integer; Data: <any array of _SortDataType>);
+  procedure/function <Name>(Count: Integer; Data: <any array of _SortDataType> [;Index: <any array of integer> ]);
   type
     _SortDataType = <Your type>;
     [_SortValueType = <any comparable with "<" type>]
@@ -32,6 +32,10 @@ Usage:
   if _SortGetValue() function is declared the algorithm will call it each time when a comparable representation of data value is needed
 *)
 
+{$IF Declared(Index)}
+  {$DEFINE _SORTINDEXED}
+{$IFEND}
+
 {$IF Declared(_SortCompare)}
   {$IFNDEF _SORTNOCOMPAREFUNC}
     {$DEFINE _SORTCOMPAREFUNC}
@@ -53,6 +57,7 @@ Usage:
 {$IFEND}
 
 {$IF not Declared(_SORT_INSERTION_THRESHOLD)}
+  // if number of elements <= this value, insertion sort will be used
   const _SORT_INSERTION_THRESHOLD = 30;
 {$IFEND}
 
@@ -60,14 +65,15 @@ Usage:
 
 const
   {$IFDEF CPU64}
-  StackSize = 64;     // Enough for 2^64 sort data size
+    StackSize = 64;     // Enough for 2^64 sort data size
   {$ELSE}
-  StackSize = 32;     // Enough for 2^32 sort data size
+    StackSize = 32;     // Enough for 2^32 sort data size
   {$ENDIF}
 
 
 var
   n1, n2, L, R: Integer;
+  {$IFDEF _SORTINDEXED}ti: Integer;{$ENDIF}
   bv, t: _SortDataType;
 
   StackPTR: Integer;
@@ -76,8 +82,8 @@ var
     l, r: Integer;
   end;
   {$IFDEF _SORTBADDATA}
-  Seed: Cardinal;
-  temp: Integer;
+    Seed: Cardinal;
+    temp: Integer;
   {$ENDIF}
   {$IFDEF _SORTCOMPUTEFUNC}
     TempValue: _SortValueType;
@@ -86,9 +92,9 @@ var
 
 begin
   {$IFDEF _SORTBADDATA}
-  Seed := 1000;
+    Seed := 1000;
   {$ENDIF}
-    MaxStack := 0;
+    MaxStack := 0; //ToFix: temporary
   StackPTR := 0;
   Stack[0].l := 0;
   Stack[0].r := Count-1;
@@ -102,36 +108,37 @@ begin
 
       for n1 := L+1 to R do begin
         n2 := n1-1;
-        bv := Data[n1];
+        bv := Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}];
         while (n2 > L) do begin
           {$IFNDEF _SORTDESCENDING}
             {$IFDEF _SORTCOMPUTEFUNC}
-              if not (_SortGetValue(bv) < _SortGetValue(Data[n2])) then Break;
+              if not (_SortGetValue(bv) < _SortGetValue(Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}])) then Break;
             {$ELSE}
               {$IFDEF _SORTCOMPAREFUNC}
-                if not (_SortCompare(bv, Data[n2]) < 0) then Break;
+                if not (_SortCompare(bv, Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}]) < 0) then Break;
               {$ELSE}
-                if not (bv < Data[n2]) then Break;
+                if not (bv < Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}]) then Break;
               {$ENDIF}
             {$ENDIF}
           {$ELSE}
             {$IFDEF _SORTCOMPUTEFUNC}
-              if not (_SortGetValue(Data[n2]) < _SortGetValue(bv)) then Break;
+              if not (_SortGetValue(Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}]) < _SortGetValue(bv)) then Break;
             {$ELSE}
               {$IFDEF _SORTCOMPAREFUNC}
-                if not (_SortCompare(Data[n2], bv) < 0) then Break;
+                if not (_SortCompare(Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}], bv) < 0) then Break;
               {$ELSE}
-                if not (Data[n2] < bv) then Break;
+                if not (Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}] < bv) then Break;
               {$ENDIF}
             {$ENDIF}
           {$ENDIF}
-          Data[n2+1] := Data[n2];
+          Data[{$IFDEF _SORTINDEXED}Index[n2+1]{$ELSE}n2+1{$ENDIF}] := Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}];
           Dec(n2);
         end;
-        if n1 <> n2 then Data[n2] := bv;
+        if n1 <> n2 then Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}] := bv;
       end;
 
     end else while (L < R) do begin
+      // Get separating element
       {$IFDEF _SORTBADDATA} {$Q-}
         Seed := 97781173 * Seed + 7;
         temp := R - L - 1;
@@ -144,9 +151,9 @@ begin
           temp := temp or temp shr 32;
         {$ENDIF}
 
-        bv := Data[Cardinal(L) + Seed and (temp shr 1)];              // Separating element
+        bv := Data[{$IFDEF _SORTINDEXED}Index[Cardinal(L) + Seed and (temp shr 1)]{$ELSE}Cardinal(L) + Seed and (temp shr 1){$ENDIF}];
       {$ELSE}
-        bv := Data[(L+R) div 2];                            // Separating element
+        bv := Data[{$IFDEF _SORTINDEXED}Index[(L+R) div 2]{$ELSE}(L+R) div 2{$ENDIF}];
       {$ENDIF}
 
       {$IFDEF _SORTCOMPUTEFUNC}
@@ -158,39 +165,45 @@ begin
       while n1 <= n2 do begin
         {$IFNDEF _SORTDESCENDING}
           {$IFDEF _SORTCOMPUTEFUNC}
-            while True do if _SortGetValue(Data[n1]) < TempValue then Inc(n1) else Break;              // While conditions not inlined by some stupid reason
-            while True do if TempValue < _SortGetValue(Data[n2]) then Dec(n2) else Break;
+            while True do if _SortGetValue(Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}]) < TempValue then Inc(n1) else Break;              // While conditions not inlined by some stupid reason
+            while True do if TempValue < _SortGetValue(Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}]) then Dec(n2) else Break;
           {$ELSE}
             {$IFDEF _SORTCOMPAREFUNC}
-              while True do if _SortCompare(Data[n1], bv) < 0 then Inc(n1) else Break;
-              while True do if _SortCompare(bv, Data[n2]) < 0 then Dec(n2) else Break;
+              while True do if _SortCompare(Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}], bv) < 0 then Inc(n1) else Break;
+              while True do if _SortCompare(bv, Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}]) < 0 then Dec(n2) else Break;
             {$ELSE}
-              while Data[n1] < bv do Inc(n1);
-              while bv < Data[n2] do Dec(n2);
+              while Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}] < bv do Inc(n1);
+              while bv < Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}] do Dec(n2);
 //              while True do if Data[n1] < bv then Inc(n1) else Break;
 //              while True do if bv < Data[n2] then Dec(n2) else Break;
             {$ENDIF}
           {$ENDIF}
         {$ELSE}
           {$IFDEF _SORTCOMPUTEFUNC}
-            while True do if TempValue < _SortGetValue(Data[n1]) then Inc(n1) else Break;
-            while True do if _SortGetValue(Data[n2]) < TempValue then Dec(n2) else Break;
+            while True do if TempValue < _SortGetValue(Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}]) then Inc(n1) else Break;
+            while True do if _SortGetValue(Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}]) < TempValue then Dec(n2) else Break;
           {$ELSE}
             {$IFDEF _SORTCOMPAREFUNC}
-              while True do if _SortCompare(bv, Data[n1]) < 0 then Inc(n1) else Break;
-              while True do if _SortCompare(Data[n2], bv) < 0 then Dec(n2) else Break;
+              while True do if _SortCompare(bv, Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}]) < 0 then Inc(n1) else Break;
+              while True do if _SortCompare(Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}], bv) < 0 then Dec(n2) else Break;
             {$ELSE}
-              while bv < Data[n1] do Inc(n1);
-              while Data[n2] < bv do Dec(n2);
+              while bv < Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}] do Inc(n1);
+              while Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}] < bv do Dec(n2);
 //              while True do if bv < Data[n1] then Inc(n1) else Break;
 //              while True do if Data[n2] < bv then Dec(n2) else Break;
             {$ENDIF}
           {$ENDIF}
         {$ENDIF}
         if n1 <= n2 then begin
-          t := Data[n1];
-          Data[n1] := Data[n2];
-          Data[n2] := t;
+          {$IFDEF _SORTINDEXED}
+            ti        := Index[n1];
+            Index[n1] := Index[n2];
+            Index[n2] := ti;
+          {$ELSE}
+            t        := Data[n1];
+            Data[n1] := Data[n2];
+            Data[n2] := t;
+          {$ENDIF}
           Inc(n1);
           Dec(n2);
         end;
@@ -216,7 +229,7 @@ begin
       end;
     end;
   until StackPTR < 0;
-  Writeln('New stack: ', MaxStack);
+//  Writeln('New stack: ', MaxStack);
 
 {$UNDEF _SORTCOMPAREFUNC}
 {$UNDEF _SORTCOMPUTEFUNC}

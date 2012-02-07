@@ -3,7 +3,7 @@ unit GenTestU;
 interface
 
 uses
-  Tester, SysUtils, Template, BaseTypes, Basics, Timer;
+  Tester, SysUtils, Template, BaseTypes, Basics;
 
 type
   _MapKeyType = AnsiString;
@@ -14,7 +14,7 @@ type
 
   TTestGenericSort = class(TTestTemplates)
   private
-    arr, arr2: TIndArray;
+    arr, arr2, ind: TIndArray;
     strarr, strarr2: TAnsiStringArray;
   protected
     procedure InitSuite(); override;
@@ -33,6 +33,7 @@ type
   published
     procedure TestSortAcc();
     procedure TestSortDsc();
+    procedure TestSortInd();
   end;
 
   TTestCollections = class(TTestTemplates)
@@ -87,8 +88,6 @@ implementation
   {$I gen_coll_linkedlist.inc}
 
 var
-  tmr: TTimer;
-  tm: TTimeMark;
   Rnd: TRandomGenerator;
 
 const
@@ -97,17 +96,6 @@ const
   CollElCnt = 1024*8;
 _SORT_INSERTION_THRESHOLD = 44;
 //type TestData = Integer;
-
-procedure Sort(const Count: Integer; const Data: TIndArray);
-//  const _SortOptions = [soBadData];
-  type _SortDataType = Integer;
-  function _SortCompare2(const V1, V2: _SortDataType): Integer; {$I inline.inc}
-  begin
-    Result := (V1 - V2);         // As usual
-  end;
-  {$MESSAGE 'Instantiating sort algorithm <Integer>'}
-  {$I gen_algo_sort.inc}
-end;
 
 procedure SortStr(const Count: Integer; const Data: TAnsiStringArray);
 //  const _SortOptions = [soBadData];
@@ -174,6 +162,15 @@ begin
   Result := i < 0;
 end;
 
+// Check if the indexed array is sorted in ascending order
+function isIndArraySortedAcc(arr, ind: TIndArray): boolean;
+var i: Integer;
+begin
+  i := Length(arr)-2;
+  while (i >= 0) and (arr[ind[i]] <= arr[ind[i+1]]) do Dec(i);
+  Result := i < 0;
+end;
+
 // Check if the array is sorted in ascending order
 function isArraySortedStr(arr: TAnsiStringArray): boolean;
 var i: Integer;
@@ -195,9 +192,12 @@ end;
 { TTestGenericSort }
 
 procedure TTestGenericSort.InitSuite();
+var i: Integer;
 begin
   if Length(arr2) <> TESTCOUNT then SetLength(arr2, TESTCOUNT);
   ShuffleArray(arr2);
+  if Length(ind) <> TESTCOUNT then SetLength(ind, TESTCOUNT);
+  for i := 0 to High(ind) do ind[i] := i;
 //  if Length(strarr2) <> TESTCOUNT then SetLength(strarr2, TESTCOUNT);
 //  ShuffleArray(strarr2);
 end;
@@ -214,51 +214,65 @@ begin
 end;
 
 procedure TTestGenericSort.testSortAcc;
+
+  procedure Sort(const Count: Integer; const Data: TIndArray);
+  //  const _SortOptions = [soBadData];
+    type _SortDataType = Integer;
+    function _SortCompare(const V1, V2: _SortDataType): Integer; {$I inline.inc}
+    begin
+      Result := (V1 - V2);         // As usual
+    end;
+    {$MESSAGE 'Instantiating sort algorithm <Integer>'}
+    {$I gen_algo_sort.inc}
+  end;
+
 begin
-  tmr.GetInterval(tm, True);
   Sort(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Assert(_Check(isArraySortedAcc(arr)), 'Sort failed');
+  Assert(_Check(isArraySortedAcc(arr)), GetName + ':Sort failed');
+end;
+
+procedure TTestGenericSort.testSortInd;
+
+  procedure Sort(const Count: Integer; var Data: TIndArray; var Index: array of Integer);
+  //  const _SortOptions = [soBadData];
+    type _SortDataType = Integer;
+    {$MESSAGE 'Instantiating sort algorithm <Integer> indexed'}
+    {$I gen_algo_sort.inc}
+  end;
+
+begin
+  Sort(TESTCOUNT, arr, ind);
+  Assert(_Check(isIndArraySortedAcc(arr, ind)), GetName + ':Sort failed');
 end;
 
 procedure TTestGenericSort.testSortStr;
 begin
-  tmr.GetInterval(tm, True);
   SortStr(TESTCOUNT, strarr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Assert(_Check(isArraySortedStr(strarr)), 'Sort failed');
+  Assert(_Check(isArraySortedStr(strarr)), GetName + ':Sort failed');
 end;
 
 procedure TTestGenericSort.testOldSortAcc;
 begin
-  tmr.GetInterval(tm, True);
   Basics.QuickSortInt(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
   Assert(_Check(isArraySortedAcc(arr)), 'Sort failed');
 end;
 
 procedure TTestGenericSort.testOldSortStr;
 begin
-  tmr.GetInterval(tm, True);
   Basics.QuickSortStr(TESTCOUNT, strarr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
   Assert(_Check(isArraySortedStr(strarr)), 'Sort failed');
 end;
 
 procedure TTestGenericSort.testOldSortDsc;
 begin
-  tmr.GetInterval(tm, True);
   Basics.QuickSortIntDsc(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
   Assert(_Check(isArraySortedDsc(arr)), 'Sort failed');
 end;
 
 procedure TTestGenericSort.testSortDsc;
 begin
-  tmr.GetInterval(tm, True);
   SortDsc(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Assert(_Check(isArraySortedDsc(arr)), 'Sort failed');
+  Assert(_Check(isArraySortedDsc(arr)), GetName + ':Sort failed');
 end;
 
 { TTestCollections }
@@ -279,7 +293,6 @@ end;
 procedure TTestHash.TestHasmMap;
 var i, cnt, t: NativeInt; Map: TIntStrHashMap;
 begin
-  tmr.GetInterval(tm, True);
   Map := TIntStrHashMap.Create(256);
 
   cnt := 0;
@@ -299,8 +312,6 @@ begin
   Map.Clear;
   Assert(_Check(Map.IsEmpty));
   Map.Free;
-
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
 end;
 
 { TTestVector }
@@ -322,13 +333,10 @@ begin
 end;
 
 initialization
-  tmr := TTimer.Create(nil);
   Rnd := TRandomGenerator.Create();
   RegisterSuites([TTestGenericSort, TTestCollections, TTestHash, TTestVector, TTestLinkedList]);
 
 finalization
-  tmr.Free();
   Rnd.Free();
-
 end.
 

@@ -18,7 +18,9 @@ type
     strarr, strarr2: TAnsiStringArray;
   protected
     procedure InitSuite(); override;
+    procedure InitTest(); override;
   public
+
     procedure PrepareArray;
 
     procedure testSortStr();
@@ -200,6 +202,11 @@ begin
 //  ShuffleArray(strarr2);
 end;
 
+procedure TTestGenericSort.InitTest;
+begin
+  PrepareArray();
+end;
+
 procedure TTestGenericSort.PrepareArray;
 begin
   arr := Copy(arr2, 0, Length(arr2));
@@ -208,7 +215,6 @@ end;
 
 procedure TTestGenericSort.testSortAcc;
 begin
-  PrepareArray;
   tmr.GetInterval(tm, True);
   Sort(TESTCOUNT, arr);
   Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
@@ -217,7 +223,6 @@ end;
 
 procedure TTestGenericSort.testSortStr;
 begin
-  PrepareArray;
   tmr.GetInterval(tm, True);
   SortStr(TESTCOUNT, strarr);
   Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
@@ -226,7 +231,6 @@ end;
 
 procedure TTestGenericSort.testOldSortAcc;
 begin
-  PrepareArray;
   tmr.GetInterval(tm, True);
   Basics.QuickSortInt(TESTCOUNT, arr);
   Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
@@ -235,7 +239,6 @@ end;
 
 procedure TTestGenericSort.testOldSortStr;
 begin
-  PrepareArray;
   tmr.GetInterval(tm, True);
   Basics.QuickSortStr(TESTCOUNT, strarr);
   Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
@@ -244,7 +247,6 @@ end;
 
 procedure TTestGenericSort.testOldSortDsc;
 begin
-  PrepareArray;
   tmr.GetInterval(tm, True);
   Basics.QuickSortIntDsc(TESTCOUNT, arr);
   Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
@@ -253,7 +255,6 @@ end;
 
 procedure TTestGenericSort.testSortDsc;
 begin
-  PrepareArray;
   tmr.GetInterval(tm, True);
   SortDsc(TESTCOUNT, arr);
   Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);

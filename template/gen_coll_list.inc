@@ -5,7 +5,7 @@
  * Performance of the operations may vary and depends on implementation.
  *)
 
-  {$IFDEF TEMPLATE_HINTS}{$MESSAGE 'Instantiating collection part of interface'}{$ENDIF}
+  {$IFDEF TPL_HINTS}{$MESSAGE 'Instantiating collection part of interface'}{$ENDIF}
   {$I gen_coll_collection.inc}
 
   {/ Returns the element at the specified position in the list. 

@@ -1,12 +1,12 @@
 (*
   @Abstract(Base code template support unit)
   (C) 2011 George "Mirage" Bakhtadze.
-  The source code may be used under either MPL 1.1 or LGPL 2.1 license. See included license.txt file <br/>
+  The source code may be used under either MPL 1.1 or LGPL 2.1 license. See included license.txt file
   Created: Sep 24, 2011
   The unit contains template related constants
 *)
 {$Include GDefines.inc}
-unit template;
+unit Template;
 
 interface
   //  Template option constants

@@ -4,7 +4,8 @@
 Usage - once per unit:
   type
     _LinkedListValueType = <some type>;
-    $I gen_coll_linkedlist.inc}
+    {$MESSAGE 'Instantiating TIntegerLinkedList interface'}    
+    {$I gen_coll_linkedlist.inc}
 
     T<xxx>LinkedList = class(_GenLinkedList)
     end;
@@ -16,7 +17,8 @@ Usage - once per unit:
        Result := v1 = v2;      // actual comparing code
      end;]
 
-    $I gen_coll_linkedlist.inc}
+     {$MESSAGE 'Instantiating TIntegerLinkedList'}    
+     {$I gen_coll_linkedlist.inc}
 *)
 
 {$IF Declared(_LinkedListOptions)}
@@ -29,7 +31,7 @@ Usage - once per unit:
   _LinkedListDelegate = function(const e: _LinkedListValueType; Data: Pointer): Boolean of object;
   {$I _Dg.inc} = _LinkedListDelegate;
   _IGenLinkedList = interface
-    {$IFDEF TEMPLATE_HINTS}{$MESSAGE 'Instantiating _IGenVector interface for a template linked list type'}{$ENDIF}
+    {$IFDEF TPL_HINTS}{$MESSAGE 'Instantiating _IGenVector interface for a template linked list type'}{$ENDIF}
     {$I gen_coll_list.inc}
   end;
 

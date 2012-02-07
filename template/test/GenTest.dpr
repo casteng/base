@@ -15,10 +15,8 @@ program GenTest;
 {.$ENDIF}
 
 uses
+  Tester,
   Forms,
-  TestFramework,
-  GUITestRunner,
-  TextTestRunner,
   GenTestU,
   Basics;
 
@@ -26,6 +24,7 @@ uses
 
 begin
   Application.Initialize;
-  GUITestRunner.RunRegisteredTests;
+  RunTests();
+  Readln;
 end.
 

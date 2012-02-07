@@ -61,9 +61,9 @@ type
   // Test suite metaclass
   CTestSuite = class of TTestSuite;
 
-  _VectorValueType = CTestSuite;        // Move to implementation?
+  _VectorValueType = CTestSuite;        // TODO: Move to implementation
   {$I gen_coll_vector.inc}
-  TTestSuiteVector = _GenVector;
+  TTestSuiteVector = _GenVector;        // TODO: Move to implementation
 
   TTestName = ShortString;
 
@@ -91,6 +91,8 @@ type
     Command: TCommand;
     // Result of previous test run
     LastResult: TTestResult;
+    // Location in code of fail. Filled in when test fails.
+    FailCodeLoc: TCodeLocation;
   end;
   // Array of tests
   TTests = array of TTest;
@@ -146,6 +148,7 @@ type
   private
     TestRoot: TTestLevel;
     AllTests: TTests;
+    FLastName: TTestName;
     function Run(Suites: TTestSuiteVector): Boolean;
     function CreateLevel(Suite: TClass; ARetrieveTests: Boolean): TTestLevel;
     function FindSuiteInLevel(Level: TTestLevel; Suite: CTestSuite): TTestLevel;
@@ -200,7 +203,15 @@ type
   }
   {$M+}
   TTestSuite = class(TObject)
+  private
+    FLastName: TTestName;
   protected
+    // If called from a test method returns name of the method. Otherwise returns name of last called test method.
+    function GetName(): string;
+    // Called after creation of a suite instance
+    procedure InitSuite(); virtual;
+    // Called before destroy of a suite instance
+    procedure DoneSuite(); virtual;
     // Called before each test method
     procedure InitTest(); virtual;
     // Called after each test method
@@ -209,6 +220,9 @@ type
     class function GetLevel(): Integer;
     // Returns all tests in the test suite
     class function GetTests(): TTests;
+  public
+    constructor Create();
+    destructor Destroy(); override;
   end;
 
   // Sets test runner. Frees previous runner if any.
@@ -304,12 +318,36 @@ var
 
 { TTestSuite }
 
+function TTestSuite.GetName: string;
+begin
+  Result := FLastName;
+end;
+
+procedure TTestSuite.InitSuite;
+begin
+end;
+
+procedure TTestSuite.DoneSuite;
+begin
+end;
+
 procedure TTestSuite.InitTest;
 begin
 end;
 
 procedure TTestSuite.DoneTest;
 begin
+end;
+
+constructor TTestSuite.Create;
+begin
+  InitSuite();
+end;
+
+destructor TTestSuite.Destroy;
+begin
+  DoneSuite();
+  inherited;
 end;
 
 class function TTestSuite.GetLevel: Integer;
@@ -488,9 +526,13 @@ begin
   Suite.InitTest();
   try
     try
+      Suite.FLastName := Tests[Index].Name;
       InvokeCommand(Suite, Tests[Index].Name);
     except
-      on E: TTestFailException do Result := trFail;
+      on E: TTestFailException do begin
+        Tests[Index].FailCodeLoc := E.CodeLocation;
+        Result := trFail;
+      end;
       on E: Exception do begin
         Result := trException;
         raise;
@@ -563,7 +605,7 @@ begin
     trNone: Log('  not run');
     trDisabled: Log('  disabled');
     trSuccess: Log('  passed');
-    trFail: Log('  failed');
+    trFail: Log('  failed' + CodeLocToStr(ATest.FailCodeLoc));
     trException: Log('  exception');
     trError: Log('  error');
   end;
@@ -577,6 +619,7 @@ end;
 
 initialization
   TestSuites := TTestSuiteVector.Create();
+  SetRunner(TLogTestRunner.Create);
 finalization
   SetRunner(nil);
   TestSuites.Free;

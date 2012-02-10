@@ -1,19 +1,31 @@
 (*
-  Generic quicksort algorithm implementation without recursion and constant memory consumption (64 * 2 * SizeOf(Integer) bytes)
-  (C) George Bakhtadze
+  (C) 2006-2012 George Bakhtadze.
+  The source code may be used under either MPL 1.1 or LGPL 2.1 license. See included license.txt file.
+
+  Generic quicksort algorithm implementation
+    + optimized generic quicksort implementation
+    + constant memory consumption (64 * 2 * SizeOf(Integer) bytes)
+    + custom inlineable comparator or evaluator functions support
+    + indirect sorting with additional index support, without data modification
+    + any indexable with "[]" collection support - raw arrays, template vectors, etc
+    + resistive to quicksort-unfriendly data (soBadData option)
+    + no recursion
+    - doesn't save relative order of equal values
+
 Usage:
 --------------------------
   procedure/function <Name>(Count: Integer; Data: <any array of _SortDataType> [;Index: <any array of integer> ]);
   type
     _SortDataType = <Your type>;
     [_SortValueType = <any comparable with "<" type>]
-  [<_SortGetValue() or _SortCompare() function>]
-  [$DEFINE _SORTDESCENDING]
-  [$DEFINE _SORTBADDATA]
-  $I gen_algo_sort.inc}
+  const _SortOptions = "["soBadData, soDescending"]";
+
+    [<_SortGetValue() or _SortCompare() function>]
+    {$I gen_algo_sort.inc}
+  end;
 --------------------------
-  define _SORTDESCENDING to perform sort in descending order
-  define _SORTBADDATA to use a random index for base element. This can be ~5% slower on usual data but good for quicksort-unfriendly data
+  include soDescending in _SortOptions constant to perform sort in descending order
+  include soBadData in _SortOptions constant to use a random index for base element. This can be ~5% slower on usual data but good for quicksort-unfriendly data.
 
   if _SortDataType is a type which can not be compared with "<" operation one of the following functions should be declared:
 
@@ -30,27 +42,51 @@ Usage:
   if _SortCompare() function is declared the algorithm will call it each time when a comparation of two data values is needed
 
   if _SortGetValue() function is declared the algorithm will call it each time when a comparable representation of data value is needed
+
+--------------------------
+  Examples:
+
+  // Example 1: Sort array of integers in accending order
+  procedure Sort(const Count: Integer; var Data: Array of Integer);
+    type _SortDataType = Integer;
+    {$MESSAGE 'Instantiating sort algorithm <Integer>'}
+    {$I gen_algo_sort.inc}
+  end;
+
+  // Example 2: Sort template vector of complex numbers by module in descending order
+  procedure Sort(const Count: Integer; Data: TComplexVector);
+    const _SortOptions = [soDescending];
+    type _SortDataType = TComplex;
+
+    function _SortCompare(const V1, V2: _SortDataType): Integer; {$I inline.inc}
+    begin
+      Result := (TComplex.GetModule(V1) - TComplex.GetModule(V2));
+    end;
+
+    {$MESSAGE 'Instantiating sort algorithm <TComplex>'}
+    {$I gen_algo_sort.inc}
+  end;
 *)
 
-{$IF Declared(Index)}
-  {$DEFINE _SORTINDEXED}
-{$IFEND}
+  {$IF Declared(Index)}
+    {$DEFINE _SORTINDEXED}
+  {$IFEND}
 
-{$IF Declared(_SortCompare)}
-  {$IFNDEF _SORTNOCOMPAREFUNC}
-    {$DEFINE _SORTCOMPAREFUNC}
-  {$ENDIF}
-{$ELSE}
-  {$UNDEF _SORTCOMPAREFUNC}
-{$IFEND}
+  {$IF Declared(_SortCompare)}
+    {$IFNDEF _SORTNOCOMPAREFUNC}
+      {$DEFINE _SORTCOMPAREFUNC}
+    {$ENDIF}
+  {$ELSE}
+    {$UNDEF _SORTCOMPAREFUNC}
+  {$IFEND}
 
-{$IF Declared(_SortGetValue)}
-  {$IFNDEF _SORTNOCOMPUTEFUNC}
-    {$DEFINE _SORTCOMPUTEFUNC}
-  {$ENDIF}
-{$ELSE}
-  {$UNDEF _SORTCOMPUTEFUNC}
-{$IFEND}
+  {$IF Declared(_SortGetValue)}
+    {$IFNDEF _SORTNOCOMPUTEFUNC}
+      {$DEFINE _SORTCOMPUTEFUNC}
+    {$ENDIF}
+  {$ELSE}
+    {$UNDEF _SORTCOMPUTEFUNC}
+  {$IFEND}
 
 {$IF Declared(_SortOptions)}
   {$I gen_algo_sort_opt.inc}
@@ -88,7 +124,6 @@ var
   {$IFDEF _SORTCOMPUTEFUNC}
     TempValue: _SortValueType;
   {$ENDIF}
-  //Ptr, EndPtr: ^_SortDataType;
 
 begin
   {$IFDEF _SORTBADDATA}
@@ -108,7 +143,13 @@ begin
 
       for n1 := L+1 to R do begin
         n2 := n1-1;
-        bv := Data[{$IFDEF _SORTINDEXED}Index[n1]{$ELSE}n1{$ENDIF}];
+        {$IFDEF _SORTINDEXED}
+          ti := Index[n1];
+          bv := Data[ti];
+        {$ELSE}
+          bv := Data[n1];
+        {$ENDIF}
+
         while (n2 > L) do begin
           {$IFNDEF _SORTDESCENDING}
             {$IFDEF _SORTCOMPUTEFUNC}
@@ -131,10 +172,22 @@ begin
               {$ENDIF}
             {$ENDIF}
           {$ENDIF}
-          Data[{$IFDEF _SORTINDEXED}Index[n2+1]{$ELSE}n2+1{$ENDIF}] := Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}];
+
+          {$IFDEF _SORTINDEXED}
+            Index[n2+1] := Index[n2];
+          {$ELSE}
+            Data[n2+1] := Data[n2];
+          {$ENDIF}
+(*          Data[{$IFDEF _SORTINDEXED}Index[n2+1]{$ELSE}n2+1{$ENDIF}] := Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}];*)
           Dec(n2);
         end;
-        if n1 <> n2 then Data[{$IFDEF _SORTINDEXED}Index[n2]{$ELSE}n2{$ENDIF}] := bv;
+
+        if n1 <> n2 then
+          {$IFDEF _SORTINDEXED}
+            Index[n2] := ti;
+          {$ELSE}
+            Data[n2] := bv;
+          {$ENDIF}
       end;
 
     end else while (L < R) do begin

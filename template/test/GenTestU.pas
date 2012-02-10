@@ -14,7 +14,7 @@ type
 
   TTestGenericSort = class(TTestTemplates)
   private
-    arr, arr2, ind: TIndArray;
+    arr, OArr, ind: TIndArray;
     strarr, strarr2: TAnsiStringArray;
   protected
     procedure InitSuite(); override;
@@ -94,7 +94,6 @@ const
   TESTCOUNT = 1024*8*4;//*256;//*1000*10;
   HashMapElCnt = 1024*8;
   CollElCnt = 1024*8;
-_SORT_INSERTION_THRESHOLD = 44;
 //type TestData = Integer;
 
 procedure SortStr(const Count: Integer; const Data: TAnsiStringArray);
@@ -153,7 +152,7 @@ begin
   end;
 end;
 
-// Check if the array is sorted in ascending order
+// Checks if the array is sorted in ascending order
 function isArraySortedAcc(arr: TIndArray): boolean;
 var i: Integer;
 begin
@@ -162,16 +161,18 @@ begin
   Result := i < 0;
 end;
 
-// Check if the indexed array is sorted in ascending order
-function isIndArraySortedAcc(arr, ind: TIndArray): boolean;
+// Checks if the indexed array is sorted in ascending order
+function isIndArraySortedAcc(arr, oarr, ind: TIndArray): boolean;
 var i: Integer;
 begin
   i := Length(arr)-2;
-  while (i >= 0) and (arr[ind[i]] <= arr[ind[i+1]]) do Dec(i);
+  if arr[i+1] = OArr[i+1] then
+    while (i >= 0) and (arr[ind[i]] <= arr[ind[i+1]])
+      and (arr[i] = OArr[i]) do Dec(i);
   Result := i < 0;
 end;
 
-// Check if the array is sorted in ascending order
+// Checks if the array is sorted in ascending order
 function isArraySortedStr(arr: TAnsiStringArray): boolean;
 var i: Integer;
 begin
@@ -180,7 +181,7 @@ begin
   Result := i < 0;
 end;
 
-// Check if the array is sorted in descending order
+// Checks if the array is sorted in descending order
 function isArraySortedDsc(arr: TIndArray): boolean;
 var i: Integer;
 begin
@@ -194,8 +195,8 @@ end;
 procedure TTestGenericSort.InitSuite();
 var i: Integer;
 begin
-  if Length(arr2) <> TESTCOUNT then SetLength(arr2, TESTCOUNT);
-  ShuffleArray(arr2);
+  if Length(OArr) <> TESTCOUNT then SetLength(OArr, TESTCOUNT);
+  ShuffleArray(OArr);
   if Length(ind) <> TESTCOUNT then SetLength(ind, TESTCOUNT);
   for i := 0 to High(ind) do ind[i] := i;
 //  if Length(strarr2) <> TESTCOUNT then SetLength(strarr2, TESTCOUNT);
@@ -209,7 +210,7 @@ end;
 
 procedure TTestGenericSort.PrepareArray;
 begin
-  arr := Copy(arr2, 0, Length(arr2));
+  arr := Copy(OArr, 0, Length(OArr));
   strarr := Copy(strarr2, 0, Length(strarr2));
 end;
 
@@ -242,7 +243,7 @@ procedure TTestGenericSort.testSortInd;
 
 begin
   Sort(TESTCOUNT, arr, ind);
-  Assert(_Check(isIndArraySortedAcc(arr, ind)), GetName + ':Sort failed');
+  Assert(_Check(isIndArraySortedAcc(arr, OArr, ind)), GetName + ':Sort failed');
 end;
 
 procedure TTestGenericSort.testSortStr;
@@ -293,7 +294,7 @@ end;
 procedure TTestHash.TestHasmMap;
 var i, cnt, t: NativeInt; Map: TIntStrHashMap;
 begin
-  Map := TIntStrHashMap.Create(256);
+  Map := TIntStrHashMap.Create(1);
 
   cnt := 0;
   for i := 0 to HashMapElCnt-1 do begin
@@ -311,6 +312,10 @@ begin
 
   Map.Clear;
   Assert(_Check(Map.IsEmpty));
+
+  Map[t] := IntToStr(t);
+  Assert(_Check(Map.ContainsKey(t) and Map.ContainsValue(IntToStr(t))));
+
   Map.Free;
 end;
 

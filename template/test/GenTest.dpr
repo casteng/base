@@ -16,14 +16,12 @@ program GenTest;
 
 uses
   Tester,
-  Forms,
   GenTestU,
   Basics;
 
 {$R *.RES}
 
 begin
-  Application.Initialize;
   RunTests();
   Readln;
 end.

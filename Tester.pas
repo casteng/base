@@ -193,13 +193,13 @@ type
     Tests should check assertions with the following syntax:
 
     To check for a condition:
-      Assert(Check(<Condition>));
+      Assert(Check(<Condition>), 'Message');
 
     To check if the test raises some of the listed exceptions:
-      Assert(Raises([<List of exception classes>]);
+      Assert(Raises([<List of exception classes>], 'Message');
 
     To check if the test returns some of the listed errors:
-      Assert(Error([<List of error classes>]);
+      Assert(Error([<List of error classes>], 'Message');
   }
   {$M+}
   TTestSuite = class(TObject)

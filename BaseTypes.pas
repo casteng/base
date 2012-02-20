@@ -361,7 +361,7 @@ const
     Old assert error procedure is save to be restored with AssertRestore.
     Returns True if hook successful or False otherwise.
     Used internally for Assert-based features.
-    Thread safe MULTITHREADASSERT defined. }
+    Thread safe if MULTITHREADASSERT defined. }
   function AssertHook(NewAssertProc: TAssertErrorProc): Boolean;
   { Restores assert error procedure changed by AssertHook.
     Used internally for Assert-based features.

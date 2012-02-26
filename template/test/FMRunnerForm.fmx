@@ -1,0 +1,83 @@
+object FMRunnerForm: TFMRunnerForm
+  Left = 0
+  Top = 0
+  Caption = 'FireMonkey Test Runner'
+  ClientHeight = 533
+  ClientWidth = 436
+  Visible = False
+  OnCreate = FormCreate
+  StyleLookup = 'backgroundstyle'
+  object TestsTree: TTreeView
+    Align = alClient
+    Position.Point = '(8,8)'
+    Width = 292.000000000000000000
+    Height = 348.000000000000000000
+    Padding.Rect = '(8,8,8,0)'
+    OnKeyUp = TestsTreeKeyUp
+    OnClick = TestsTreeClick
+    TabOrder = 0
+    ShowSizeGrip = True
+    ShowCheckboxes = True
+    OnChange = TestsTreeChange
+    OnChangeCheck = TestsTreeChangeCheck
+  end
+  object TestLog: TMemo
+    Align = alMostBottom
+    Position.Point = '(8,364)'
+    Width = 420.000000000000000000
+    Height = 161.000000000000000000
+    Padding.Rect = '(8,8,8,8)'
+    TabOrder = 1
+    KeyboardType = vktDefault
+  end
+  object ButtonsPanel: TLayout
+    Align = alRight
+    Position.Point = '(308,8)'
+    Width = 120.000000000000000000
+    Height = 348.000000000000000000
+    Padding.Rect = '(0,8,8,0)'
+    object BtnRunChecked: TCornerButton
+      Align = alBottom
+      Position.Point = '(0,274)'
+      Width = 120.000000000000000000
+      Height = 33.000000000000000000
+      Padding.Rect = '(0,8,0,0)'
+      OnClick = BtnRunCheckedClick
+      TabOrder = 0
+      Font.Family = 'Segoe UI'
+      Font.Size = 12.000000000000000000
+      Font.Style = [fsBold]
+      Text = 'RUN CHECKED'
+      XRadius = 4.000000000000000000
+      YRadius = 4.000000000000000000
+      Sides = [sdTop, sdLeft, sdBottom, sdRight]
+    end
+    object BtnBtnRunAll: TCornerButton
+      Align = alMostBottom
+      Position.Point = '(0,315)'
+      Width = 120.000000000000000000
+      Height = 33.000000000000000000
+      Padding.Rect = '(0,8,0,0)'
+      OnClick = BtnBtnRunAllClick
+      TabOrder = 1
+      Font.Family = 'Segoe UI'
+      Font.Size = 16.000000000000000000
+      Font.Style = [fsBold]
+      Text = 'RUN ALL'
+      XRadius = 4.000000000000000000
+      YRadius = 4.000000000000000000
+      Sides = [sdTop, sdLeft, sdBottom, sdRight]
+    end
+    object Info: TLabel
+      Align = alTop
+      Position.Point = '(0,8)'
+      Width = 120.000000000000000000
+      Height = 17.000000000000000000
+      Padding.Rect = '(0,8,0,0)'
+      TabOrder = 2
+      AutoSize = True
+      Text = 'Info'
+      WordWrap = False
+    end
+  end
+end

@@ -221,7 +221,7 @@ procedure TTestGenericSort.testSortAcc;
     type _SortDataType = Integer;
     function _SortCompare(const V1, V2: _SortDataType): Integer; {$I inline.inc}
     begin
-      Result := (V1 - V2);         // As usual
+      Result := -(V1 - V2);         // As usual
     end;
     {$MESSAGE 'Instantiating sort algorithm <Integer>'}
     {$I gen_algo_sort.inc}

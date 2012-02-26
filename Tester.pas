@@ -83,6 +83,8 @@ type
 
   // Record with test data
   TTest = record
+    // Index in all tests array of runner class
+    Index: Integer;
     // Testsuite class
     Suite: CTestSuite;
     // Test name
@@ -110,15 +112,15 @@ type
     // Index of last run test
     LastIndex: Integer;
     // Test suite class reference
-    SuiteClass: CTestSuite;
+    FSuiteClass: CTestSuite;
     // Suite instance
     Suite: TTestSuite;
     // Parent level
-    Parent: TTestLevel;
+    FParent: TTestLevel;
     // Tests
-    Tests: TTests;
+    FTests: TTests;
     // Next hierarchy
-    Childs: array of TTestLevel;
+    FChilds: array of TTestLevel;
     // Creates an instance of test level
     constructor Create(ASuiteClass: CTestSuite; AParent: TTestLevel);
 
@@ -132,35 +134,49 @@ type
     // Retuns total number of test in hierarchy
     function GetTotalTestCount(): Integer;
 
+    // Adds new child level
+    procedure AddChild(Level: TTestLevel);
+    function GetChild(Index: Integer): TTestLevel;
+    function GetTotalChilds: Integer;
+    function GetTest(Index: Integer): TTest;
+    function GetTotalTests: Integer;
+  public
     { Runs the given test of the given suite. First calls Suite.InitTest() then calls test method, finally, calls Suite.DoneTest()
       Returns test outcome. }
     function RunTest(Index: Integer): TTestResult;
     // Runs all tests in level
     function Run(RunChilds: TChildsRunCondition): Boolean;
-
-    // Adds new child level
-    procedure AddChild(Level: TTestLevel);
-
+    // Number of child levels
+    property TotalChilds: Integer read GetTotalChilds;
+    // Child level by index
+    property Childs[Index: Integer]: TTestLevel read GetChild;
+    // Number of tests
+    property TotalTests: Integer read GetTotalTests;
+    // Test by index
+    property Tests[Index: Integer]: TTest read GetTest;
+    // Test suite class reference
+    property SuiteClass: CTestSuite read FSuiteClass write FSuiteClass;
   end;
 
   // Abstract test runner class
   TTestRunner = class(TObject)
   private
-    TestRoot: TTestLevel;
-    AllTests: TTests;
-    FLastName: TTestName;
+    FTestRoot: TTestLevel;
+    FAllTests: TTests;
     function Run(Suites: TTestSuiteVector): Boolean;
     function CreateLevel(Suite: TClass; ARetrieveTests: Boolean): TTestLevel;
     function FindSuiteInLevel(Level: TTestLevel; Suite: CTestSuite): TTestLevel;
-    procedure FillAllTests(Level: TTestLevel; AllTests: TTests; Offset: Integer);
+    function FillAllTests(Level: TTestLevel; AllTests: TTests; Offset: Integer): Integer;
     function GetTotalTests: Integer;
     function GetTest(Index: Integer): TTest;
   protected
+    // Should run all tests and return True if all tests passed successfully
+    function DoRun(): Boolean; virtual; abstract;
     // Returns test level containing tests of the specified class or nil if not found
     function FindTestLevel(Suite: CTestSuite): TTestLevel;
 
     // Should return False if the test should not be performed at this time. For exampled, it's disabled.
-    function IsTestEnabled(const ATest: TTest): Boolean; virtual; abstract;
+    function IsTestEnabled(const ATest: TTest): Boolean; virtual;
     // Called after test suite instance creation
     procedure HandleCreateSuite(Suite: TTestSuite); virtual;
     // Called before test suite instance destroy
@@ -176,12 +192,16 @@ type
     property Tests[Index: Integer]: TTest read GetTest;
     // Number of registered tests
     property TotalTests: Integer read GetTotalTests;
+    // Root test level
+    property TestRoot: TTestLevel read FTestRoot;
   public
     // Destroys the runner
     destructor Destroy; override;
   end;
 
   TLogTestRunner = class(TTestRunner)
+  protected
+    function DoRun(): Boolean; override;
     function IsTestEnabled(const ATest: TTest): Boolean; override;
     function HandleTestResult(const ATest: TTest; TestResult: TTestResult): Boolean; override;
     procedure HandleCreateSuite(Suite: TTestSuite); override;
@@ -384,20 +404,25 @@ var i: Integer;
 begin
   Result := nil;
   if Level = nil then Exit;
-  i := High(Level.Childs);
+  i := High(Level.FChilds);
   while (i >= 0)
-    and ((Level.Childs[i] = nil) or (Level.Childs[i].SuiteClass <> Suite)) do
+    and ((Level.FChilds[i] = nil) or (Level.FChilds[i].FSuiteClass <> Suite)) do
       Dec(i);
   if i >= 0 then
-    Result := Level.Childs[i]
+    Result := Level.FChilds[i]
   else
-    for i := 0 to High(Level.Childs) do
-      Result := FindSuiteInLevel(Level.Childs[i], Suite);
+    for i := 0 to High(Level.FChilds) do
+      Result := FindSuiteInLevel(Level.FChilds[i], Suite);
 end;
 
 function TTestRunner.FindTestLevel(Suite: CTestSuite): TTestLevel;
 begin
-  Result := FindSuiteInLevel(TestRoot, Suite);
+  Result := FindSuiteInLevel(FTestRoot, Suite);
+end;
+
+function TTestRunner.IsTestEnabled(const ATest: TTest): Boolean;
+begin
+  Result := True;
 end;
 
 function TTestRunner.CreateLevel(Suite: TClass; ARetrieveTests: Boolean): TTestLevel;
@@ -406,9 +431,9 @@ begin
   Assert(Suite.InheritsFrom(TTestSuite));
 
   if (Suite = TTestSuite) then begin
-    if TestRoot = nil then
-      TestRoot := TTestLevel.Create(CTestSuite(Suite), nil);
-    Result := TestRoot;
+    if FTestRoot = nil then
+      FTestRoot := TTestLevel.Create(CTestSuite(Suite), nil);
+    Result := FTestRoot;
   end else begin
     Level := CreateLevel(Suite.ClassParent, False);
     Result := FindSuiteInLevel(Level, CTestSuite(Suite));
@@ -421,35 +446,41 @@ begin
   if ARetrieveTests then Result.RetrieveTests();
 end;
 
-procedure TTestRunner.FillAllTests(Level: TTestLevel; AllTests: TTests; Offset: Integer);
+function TTestRunner.FillAllTests(Level: TTestLevel; AllTests: TTests; Offset: Integer): Integer;
 var i: Integer;
 begin
-  for i := 0 to High(Level.Tests) do AllTests[Offset+i] := Level.Tests[i];
-  for i := 0 to High(Level.Childs) do FillAllTests(Level.Childs[i], AllTests, Offset + Length(Level.Tests));
+  for i := 0 to High(Level.FTests) do begin
+    Level.FTests[i].Index := Offset+i;
+    AllTests[Offset+i] := Level.FTests[i];
+  end;
+  for i := 0 to High(Level.FChilds) do Inc(Offset, FillAllTests(Level.FChilds[i], AllTests, Offset + Length(Level.FTests)));
+  Result := Length(Level.FTests);
 end;
 
 function TTestRunner.GetTotalTests: Integer;
 begin
-  Result := Length(AllTests);
+  Result := Length(FAllTests);
 end;
 
 function TTestRunner.GetTest(Index: Integer): TTest;
 begin
-  Result := AllTests[Index];
+  Result := FAllTests[Index];
 end;
 
 function TTestRunner.Run(Suites: TTestSuiteVector): Boolean;
 begin
   PrepareTests(TestSuites);
-  Result := TestRoot.Run(crcAlways);
+  Result := DoRun();
 end;
 
 procedure TTestRunner.PrepareTests(Suites: TTestSuiteVector);
 var i: Integer;
 begin
+  if Suites.Count = 0 then Exit;
   for i := 0 to Suites.Count-1 do CreateLevel(Suites[i], True);
-  SetLength(AllTests, TestRoot.GetTotalTestCount());
-  FillAllTests(TestRoot, AllTests, 0);
+  SetLength(FAllTests, FTestRoot.GetTotalTestCount());
+  FillAllTests(FTestRoot, FAllTests, 0);
+  for i := 0 to GetTotalTests()-1 do Assert(FAllTests[i].Index = i);
 end;
 
 destructor TTestRunner.Destroy;
@@ -457,12 +488,12 @@ destructor TTestRunner.Destroy;
   var i: Integer;
   begin
      if Level = nil then Exit;
-     for i := 0 to High(Level.Childs) do FreeLevel(Level.Childs[i]);
+     for i := 0 to High(Level.FChilds) do FreeLevel(Level.FChilds[i]);
      Level.Free();
   end;
 begin
-  FreeLevel(TestRoot);
-  SetLength(AllTests, 0);
+  FreeLevel(FTestRoot);
+  SetLength(FAllTests, 0);
   inherited;
 end;
 
@@ -478,18 +509,18 @@ end;
 
 constructor TTestLevel.Create(ASuiteClass: CTestSuite; AParent: TTestLevel);
 begin
-  SuiteClass := ASuiteClass;
-  Parent     := AParent;
-  LastIndex  := -1;
+  FSuiteClass := ASuiteClass;
+  FParent     := AParent;
+  LastIndex   := -1;
 end;
 
 procedure TTestLevel.CreateSuite;
 var i: Integer;
 begin
   Assert(Suite = nil);
-  Suite := SuiteClass.Create();
+  Suite := FSuiteClass.Create();
   TestRunner.HandleCreateSuite(Suite);
-  for i := 0 to High(Tests) do Tests[i].LastResult := trNone;
+  for i := 0 to High(FTests) do FTests[i].LastResult := trNone;
   LastIndex := -1;
 end;
 
@@ -503,17 +534,37 @@ begin
   LastIndex := -1;  
 end;
 
+function TTestLevel.GetTotalChilds: Integer;
+begin
+  Result := Length(FChilds);
+end;
+
+function TTestLevel.GetChild(Index: Integer): TTestLevel;
+begin
+  Result := FChilds[Index];
+end;
+
+function TTestLevel.GetTotalTests: Integer;
+begin
+  Result := Length(FTests);
+end;
+
+function TTestLevel.GetTest(Index: Integer): TTest;
+begin
+  Result := FTests[Index];
+end;
+
 function TTestLevel.GetTotalTestCount: Integer;
 var i: Integer;
 begin
-  Result := Length(Tests);
-  for i := 0 to High(Childs) do Result := Result + Childs[i].GetTotalTestCount();
+  Result := Length(FTests);
+  for i := 0 to High(FChilds) do Result := Result + FChilds[i].GetTotalTestCount();
 end;
 
 function TTestLevel.RetrieveTests: Integer;
 begin
-  Tests := SuiteClass.GetTests();
-  Result := Length(Tests);
+  FTests := FSuiteClass.GetTests();
+  Result := Length(FTests);
 end;
 
 function TTestLevel.RunTest(Index: Integer): TTestResult;
@@ -526,11 +577,11 @@ begin
   Suite.InitTest();
   try
     try
-      Suite.FLastName := Tests[Index].Name;
-      InvokeCommand(Suite, Tests[Index].Name);
+      Suite.FLastName := FTests[Index].Name;
+      InvokeCommand(Suite, FTests[Index].Name);
     except
       on E: TTestFailException do begin
-        Tests[Index].FailCodeLoc := E.CodeLocation;
+        FTests[Index].FailCodeLoc := E.CodeLocation;
         Result := trFail;
       end;
       on E: Exception do begin
@@ -539,7 +590,7 @@ begin
       end;
     end;
   finally
-    Tests[Index].LastResult := Result;
+    FTests[Index].LastResult := Result;
     Suite.DoneTest();
   end;
 end;
@@ -553,29 +604,29 @@ begin
   i := 0;
   RunNext := True;
   Res := trNone;
-  while (i < Length(Tests)) and RunNext do begin
+  while (i < Length(FTests)) and RunNext do begin
 
-    if TestRunner.isTestEnabled(Tests[i]) then begin
+    if TestRunner.isTestEnabled(FTests[i]) then begin
       try
         Res := RunTest(i);
       except
         on E: Exception do Res := trException;
       end;
-      RunNext := TestRunner.HandleTestResult(Tests[i], Res);
+      RunNext := TestRunner.HandleTestResult(FTests[i], Res);
     end else
-      Tests[i].LastResult := trDisabled;
+      FTests[i].LastResult := trDisabled;
     Inc(i);
   end;
-  Result := i >= Length(Tests);
+  Result := i >= Length(FTests);
 
   if (RunChilds <> crcNever) and (Result or (RunChilds = crcAlways)) then
-    for i := 0 to High(Childs) do Result := Result and Childs[i].Run(RunChilds);
+    for i := 0 to High(FChilds) do Result := Result and FChilds[i].Run(RunChilds);
 end;
 
 procedure TTestLevel.AddChild(Level: TTestLevel);
 begin
-  SetLength(Childs, Length(Childs)+1);
-  Childs[High(Childs)] := Level;
+  SetLength(FChilds, Length(FChilds)+1);
+  FChilds[High(FChilds)] := Level;
 end;
 
 { TTestFailException }
@@ -587,6 +638,11 @@ begin
 end;
 
 { TLogTestRunner }
+
+function TLogTestRunner.DoRun(): Boolean;
+begin
+  Result := TestRoot.Run(crcAlways);
+end;
 
 procedure TLogTestRunner.HandleCreateSuite(Suite: TTestSuite);
 begin

@@ -1,4 +1,4 @@
-set fpcfile=GenTest.dpr
+set fpcfile=TplTest.dpr
 
 set fpccmd=%FPC_HOME%\bin\i386-win32\fpc.exe -dDEBUG
 set fpcoptions=-Fu.. -Fu../.. -Fi.. -Fi../..
@@ -8,5 +8,5 @@ rem set fpcoptions=%fpcoptions% -Sa
 %fpccmd% %fpcoptions% %fpcfile%
 
 if %ERRORLEVEL% NEQ 0 GOTO End
-bin\GenTest.exe
+bin\TplTest.exe
 :End

@@ -70,6 +70,8 @@ type
   // Possible test outcome
   TTestResult = (// Not run yet
                  trNone,
+                 // Not run because is skipped due to previous test in suite failed
+                 trSkipped,
                  // Test not run because it's disabled
                  trDisabled,
                  // Test passes
@@ -340,7 +342,7 @@ var
 
 function TTestSuite.GetName: string;
 begin
-  Result := FLastName;
+  Result := string(FLastName);
 end;
 
 procedure TTestSuite.InitSuite;
@@ -584,10 +586,10 @@ begin
         FTests[Index].FailCodeLoc := E.CodeLocation;
         Result := trFail;
       end;
-      on E: Exception do begin
+{      on E: Exception do begin
         Result := trException;
         raise;
-      end;
+      end;}
     end;
   finally
     FTests[Index].LastResult := Result;
@@ -604,23 +606,29 @@ begin
   i := 0;
   RunNext := True;
   Res := trNone;
-  while (i < Length(FTests)) and RunNext do begin
+  while (i < Length(FTests)) do begin
 
-    if TestRunner.isTestEnabled(FTests[i]) then begin
+    if RunNext and TestRunner.isTestEnabled(FTests[i]) then begin
       try
         Res := RunTest(i);
       except
         on E: Exception do Res := trException;
       end;
       RunNext := TestRunner.HandleTestResult(FTests[i], Res);
-    end else
-      FTests[i].LastResult := trDisabled;
+    end else begin
+      if RunNext then
+        FTests[i].LastResult := trDisabled
+      else
+        FTests[i].LastResult := trSkipped;
+      RunNext := TestRunner.HandleTestResult(FTests[i], FTests[i].LastResult) and RunNext;
+    end;
     Inc(i);
   end;
   Result := i >= Length(FTests);
 
   if (RunChilds <> crcNever) and (Result or (RunChilds = crcAlways)) then
-    for i := 0 to High(FChilds) do Result := Result and FChilds[i].Run(RunChilds);
+    for i := 0 to High(FChilds) do
+      Result := FChilds[i].Run(RunChilds) and Result;
 end;
 
 procedure TTestLevel.AddChild(Level: TTestLevel);
@@ -670,7 +678,7 @@ end;
 function TLogTestRunner.IsTestEnabled(const ATest: TTest): Boolean;
 begin
   Result := True;
-  Log('Test: "' + ATest.Name + '"...');
+  Log('Test: "' + string(ATest.Name) + '"...');
 end;
 
 initialization

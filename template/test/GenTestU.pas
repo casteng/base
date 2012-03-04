@@ -1,3 +1,10 @@
+(*
+  @Abstract(Template classes and algorithms test unit)
+  (C) 2003-2012 George "Mirage" Bakhtadze. <a href="http://www.casteng.com">www.casteng.com</a> <br/>
+  The source code may be used under either MPL 1.1 or LGPL 2.1 license. See included license.txt file <br/>
+  Created: Jan 21, 2012
+  The unit contains tests for template classes and algorithms
+  *)
 {$Include GDefines.inc}
 unit GenTestU;
 interface
@@ -6,12 +13,16 @@ uses
   Tester, SysUtils, Template, BaseTypes, Basics;
 
 type
+  // Key type of test map class
   _MapKeyType = AnsiString;
+  // Value type of test map class
   _MapValueType = AnsiString;
 
+  // Base class for all template classes tests
   TTestTemplates = class(TTestSuite)
   end;
 
+  // Generic sort algorithm test class
   TTestGenericSort = class(TTestTemplates)
   private
     arr, OArr, ind: TIndArray;
@@ -125,7 +136,7 @@ type _DataType = Integer;
 
 // Initialize array and fill it with random values
 procedure ShuffleArray(data: TIndArray); overload;
-var i, v, vi: Integer;
+var i: Integer;
 begin
   Randomize;
   for i := 0 to TESTCOUNT-1 do data[i] := Random(TESTCOUNT);
@@ -221,7 +232,7 @@ procedure TTestGenericSort.testSortAcc;
     type _SortDataType = Integer;
     function _SortCompare(const V1, V2: _SortDataType): Integer; {$I inline.inc}
     begin
-      Result := -(V1 - V2);         // As usual
+      Result := (V1 - V2);         // As usual
     end;
     {$MESSAGE 'Instantiating sort algorithm <Integer>'}
     {$I gen_algo_sort.inc}
@@ -281,6 +292,7 @@ end;
 function TTestCollections.ForCollEl(const e: Integer; Data: Pointer): Boolean;
 begin
   Assert(_Check(e = Rnd.RndI(CollElCnt)), 'Value check in for each fail');
+  Result := True;
 end;
 
 { TTestHash }
@@ -289,6 +301,7 @@ function TTestHash.ForPair(const Key: Integer; const Value: String; Data: Pointe
 begin
 //  Writeln(Key, ' = ', Value);
   Assert(_Check((Key) = StrToInt(Value)), 'Value check in for each fail');
+  Result := True;
 end;
 
 procedure TTestHash.TestHasmMap;

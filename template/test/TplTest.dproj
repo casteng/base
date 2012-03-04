@@ -3,7 +3,7 @@
 			<ProjectGuid>{91269F77-B1D0-4C84-BF3C-FF337815454F}</ProjectGuid>
 			<ProjectVersion>13.4</ProjectVersion>
 			<FrameworkType>FMX</FrameworkType>
-			<MainSource>Project1.dpr</MainSource>
+			<MainSource>TplTest.dpr</MainSource>
 			<Base>True</Base>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<Platform Condition="'$(Platform)'==''">Win32</Platform>
@@ -44,7 +44,7 @@
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 			<Manifest_File>None</Manifest_File>
 			<VerInfo_Locale>1049</VerInfo_Locale>
-			<DCC_UsePackage>bindcompfmx;fmx;rtl;IndySystem;DbxClientDriver;bindcomp;DBXInterBaseDriver;DataSnapCommon;xmlrtl;DbxCommonDriver;IndyProtocols;DBXMySQLDriver;bindengine;DBXOracleDriver;DBXInformixDriver;IndyCore;fmxase;DBXFirebirdDriver;inet;fmxobj;inetdbxpress;DBXSybaseASADriver;fmxdae;$(DCC_UsePackage)</DCC_UsePackage>
+			<DCC_UsePackage>bindcompfmx;fmx;rtl;IndySystem;bindcomp;xmlrtl;IndyProtocols;bindengine;IndyCore;fmxase;inet;fmxobj;inetdbxpress;fmxdae;$(DCC_UsePackage)</DCC_UsePackage>
 			<Icon_MainIcon>$(BDS)\bin\delphi_PROJECTICON.ico</Icon_MainIcon>
 			<DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
 			<DCC_DcuOutput>./temp/$(Platform)</DCC_DcuOutput>
@@ -56,10 +56,10 @@
 			<DCC_K>false</DCC_K>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base_Win64)'!=''">
-			<DCC_UsePackage>DBXOdbcDriver;DBXSybaseASEDriver;vclimg;vclactnband;bindcompvcl;vclie;vcltouch;DBXDb2Driver;VclSmp;vcl;DBXMSSQLDriver;vclx;$(DCC_UsePackage)</DCC_UsePackage>
+			<DCC_UsePackage>vclimg;vclactnband;bindcompvcl;vclie;vcltouch;VclSmp;vcl;vclx;$(DCC_UsePackage)</DCC_UsePackage>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base_Win32)'!=''">
-			<DCC_UsePackage>TeeDB;inetdbbde;Tee;DBXOdbcDriver;svnui;DBXSybaseASEDriver;vclimg;fmi;fs16;vclactnband;FMXTee;TeeUI;bindcompvcl;vclie;vcltouch;DBXDb2Driver;vclribbon;VclSmp;fsDB16;vcl;DBXMSSQLDriver;CodeSiteExpressPkg;FmxTeeUI;vclx;svn;bdertl;$(DCC_UsePackage)</DCC_UsePackage>
+			<DCC_UsePackage>TeeDB;inetdbbde;Tee;svnui;vclimg;fmi;vclactnband;FMXTee;TeeUI;bindcompvcl;vclie;vcltouch;VclSmp;vcl;CodeSiteExpressPkg;FmxTeeUI;vclx;svn;bdertl;$(DCC_UsePackage)</DCC_UsePackage>
 			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
 			<DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
 			<VerInfo_Locale>1033</VerInfo_Locale>
@@ -67,6 +67,7 @@
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
+			<DCC_DebugDCUs>true</DCC_DebugDCUs>
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 			<DCC_Optimize>false</DCC_Optimize>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
@@ -134,7 +135,7 @@
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Source>
-						<Source Name="MainSource">Project1.dpr</Source>
+						<Source Name="MainSource">TplTest.dpr</Source>
 					</Source>
 					<Excluded_Packages/>
 				</Delphi.Personality>

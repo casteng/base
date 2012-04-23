@@ -128,6 +128,8 @@ type
     Next: PBinding;
   end;
 
+  TMouseButtons = array[TMouseButton] of Boolean;
+
   // Element of binding array
   TBindingElement = packed record
     First, Current, Terminator: PBinding;
@@ -158,7 +160,7 @@ type
   // Mouse state data structure. <b>lX</b>, <b>lY</b> and <b>lZ</b> is mouse position at corresponding axis. <b>Buttons</b> - mouse buttons state
   TMouseState = packed record
     lX, lY, lZ: LongInt;
-    Buttons: array[0..3] of Byte;
+    Buttons: TMouseButtons;
   end;
 
   CController = class of TController;
@@ -910,20 +912,20 @@ begin
 
         if (InputEvents[i].EventType = btKeyDown) then begin
           if MouseEvent then
-            MessageHandler(TMouseDownMsg.Create(MouseX, MouseY, InputEvents[i].EventData, Modifiers)) else
+            MessageHandler(TMouseDownMsg.Create(MouseX, MouseY, TMouseButton(InputEvents[i].EventData), Modifiers)) else
               MessageHandler(TKeyDownMsg.Create(InputEvents[i].EventData));
           KeyQueryState[InputEvents[i].EventData].State := kqsDown;
         end else begin
           if MouseEvent then
-            MessageHandler(TMouseUpMsg.Create(MouseX, MouseY, InputEvents[i].EventData, Modifiers)) else
+            MessageHandler(TMouseUpMsg.Create(MouseX, MouseY, TMouseButton(InputEvents[i].EventData), Modifiers)) else
               MessageHandler(TKeyUpMsg.Create(InputEvents[i].EventData));
           if KeyQueryState[InputEvents[i].EventData].State = kqsDown then begin
             if MouseEvent then
-              MessageHandler(TMouseClickMsg.Create(MouseX, MouseY, InputEvents[i].EventData, Modifiers)) else
+              MessageHandler(TMouseClickMsg.Create(MouseX, MouseY, TMouseButton(InputEvents[i].EventData), Modifiers)) else
                 MessageHandler(TKeyClickMsg.Create(InputEvents[i].EventData));
             if (CurMs - KeyQueryState[InputEvents[i].EventData].LastClickedTime < DblClickTimeout) then begin
               if MouseEvent then
-                MessageHandler(TMouseDblClickMsg.Create(MouseX, MouseY, InputEvents[i].EventData, Modifiers)) else
+                MessageHandler(TMouseDblClickMsg.Create(MouseX, MouseY, TMouseButton(InputEvents[i].EventData), Modifiers)) else
                   MessageHandler(TKeyDblClickMsg.Create(InputEvents[i].EventData));
               KeyQueryState[InputEvents[i].EventData].LastClickedTime := 0;
             end else KeyQueryState[InputEvents[i].EventData].LastClickedTime := CurMs;

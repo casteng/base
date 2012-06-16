@@ -247,12 +247,16 @@ type
   function MinI(V1, V2: Integer): Integer;
   function MaxC(V1, V2: Cardinal): Cardinal;
   function MinC(V1, V2: Cardinal): Cardinal;
+
+  function Max(V1, V2: Single): Single; overload; {$I inline.inc}
+  function Min(V1, V2: Single): Single; overload; {$I inline.inc}
+  function Max(V1, V2: Integer): Integer; overload; {$I inline.inc}
+  function Min(V1, V2: Integer): Integer; overload; {$I inline.inc}
+
   function ClampI(V, Min, Max: Integer): Integer;
   procedure SwapI(var a, b: Integer);
   function BitTest(Data: Cardinal; BitIndex: Byte): Boolean;
   function InterleaveBits(x, y: Smallint): Integer;
-
-  function PtrOffs(Base: Pointer; Offset: Integer): Pointer;
 
   // Returns color max component value
   function GetColor4SIntensity(const Color: TColor4s): Single;
@@ -592,6 +596,26 @@ begin
   Assert((Result <= V1) and (Result <= V2));
 end;
 
+function Max(V1, V2: Single): Single; overload;
+begin
+  Result := MaxS(V1, V2);
+end;
+
+function Min(V1, V2: Single): Single; overload;
+begin
+  Result := MinS(V1, V2);
+end;
+
+function Max(V1, V2: Integer): Integer; overload;
+begin
+  Result := MaxI(V1, V2);
+end;
+
+function Min(V1, V2: Integer): Integer; overload;
+begin
+  Result := MinI(V1, V2);
+end;
+
 function ClampI(V, Min, Max: Integer): Integer;
 begin
 //  if V < B1 then Result := B1 else if V > B2 then Result := B2 else Result := V;
@@ -628,12 +652,6 @@ y = (y | (y << S[1])) & B[1];
 y = (y | (y << S[0])) & B[0];
 
 z = x | (y << 1);}
-end;
-
-function PtrOffs(Base: Pointer; Offset: Integer): Pointer;
-begin
-  Result := Base;
-  Inc(PByte(Result), Offset);
 end;
 
 function GetColor4SIntensity(const Color: TColor4s): Single;
@@ -957,7 +975,7 @@ begin
   end;
 end;
 
-function IsInArea(const X, Y, X1, Y1, X2, Y2: Single): Boolean;
+function IsInArea(const X, Y, X1, Y1, X2, Y2: Single): Boolean; overload;
 begin
   Result := (X >= X1) and (Y >= Y1) and (X < X2) and (Y < Y2);
 end;

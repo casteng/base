@@ -278,9 +278,9 @@ type
   TMouseButtonMsg = class(TMouseMsg)
   public
     // Button number. usually 1 - left, 2 - right, 4 - middle (see Input.IK_MOUSELEFT etc)
-    Button: Integer;
+    Button: TMouseButton;
     // <b>AButton</b> - button number
-    constructor Create(AX, AY, AButton: Integer; AModifierState: TKeyModifiers);
+    constructor Create(AX, AY: Integer; AButton: TMouseButton; AModifierState: TKeyModifiers);
   end;
 
   // The message is sent to <b>core handler</b> when a mouse button has been pressed
@@ -438,7 +438,7 @@ end;
 
 { TMouseButtonMsg }
 
-constructor TMouseButtonMsg.Create(AX, AY, AButton: Integer; AModifierState: TKeyModifiers);
+constructor TMouseButtonMsg.Create(AX, AY: Integer; AButton: TMouseButton; AModifierState: TKeyModifiers);
 begin
   inherited Create(AX, AY, AModifierState);
   Button := AButton;

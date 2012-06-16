@@ -1,23 +1,37 @@
+(*
+  @Abstract(Template classes and algorithms test unit)
+  (C) 2003-2012 George "Mirage" Bakhtadze. <a href="http://www.casteng.com">www.casteng.com</a> <br/>
+  The source code may be used under either MPL 1.1 or LGPL 2.1 license. See included license.txt file <br/>
+  Created: Jan 21, 2012
+  The unit contains tests for template classes and algorithms
+  *)
 {$Include GDefines.inc}
 unit GenTestU;
 interface
 
 uses
-  TestFramework, SysUtils, Template, BaseTypes, Basics, Timer;
+  Tester, SysUtils, Template, BaseTypes, Basics;
 
 type
+  // Key type of test map class
   _MapKeyType = AnsiString;
+  // Value type of test map class
   _MapValueType = AnsiString;
 
-  TestGenericSort = class(TTestCase)
+  // Base class for all template classes tests
+  TTestTemplates = class(TTestSuite)
+  end;
+
+  // Generic sort algorithm test class
+  TTestGenericSort = class(TTestTemplates)
   private
-    arr, arr2: TIndArray;
+    arr, OArr, ind: TIndArray;
     strarr, strarr2: TAnsiStringArray;
-    function ForPair(const Key: Integer; const Value: String; Data: Pointer): Boolean;
-    function ForCollEl(const e: Integer; Data: Pointer): Boolean;
   protected
-    procedure SetUp; override;
+    procedure InitSuite(); override;
+    procedure InitTest(); override;
   public
+
     procedure PrepareArray;
 
     procedure testSortStr();
@@ -30,9 +44,28 @@ type
   published
     procedure TestSortAcc();
     procedure TestSortDsc();
+    procedure TestSortInd();
+  end;
 
+  TTestCollections = class(TTestTemplates)
+  protected
+    function ForCollEl(const e: Integer; Data: Pointer): Boolean;
+  end;
+
+  TTestHash = class(TTestCollections)
+  private
+    function ForPair(const Key: Integer; const Value: String; Data: Pointer): Boolean;
+  published
     procedure TestHasmMap();
+  end;
+
+  TTestVector = class(TTestCollections)
+  published
     procedure TestVector();
+  end;
+
+  TTestLinkedList = class(TTestCollections)
+  published
     procedure TestLinkedList();
   end;
 
@@ -66,27 +99,13 @@ implementation
   {$I gen_coll_linkedlist.inc}
 
 var
-  tmr: TTimer;
-  tm: TTimeMark;
   Rnd: TRandomGenerator;
 
 const
   TESTCOUNT = 1024*8*4;//*256;//*1000*10;
   HashMapElCnt = 1024*8;
   CollElCnt = 1024*8;
-_SORT_INSERTION_THRESHOLD = 44;
 //type TestData = Integer;
-
-procedure Sort(const Count: Integer; const Data: TIndArray);
-//  const _SortOptions = [soBadData];
-  type _SortDataType = Integer;
-  function _SortCompare2(const V1, V2: _SortDataType): Integer; {$I inline.inc}
-  begin
-    Result := (V1 - V2);         // As usual
-  end;
-  {$MESSAGE 'Instantiating sort algorithm <Integer>'}
-  {$I gen_algo_sort.inc}
-end;
 
 procedure SortStr(const Count: Integer; const Data: TAnsiStringArray);
 //  const _SortOptions = [soBadData];
@@ -117,7 +136,7 @@ type _DataType = Integer;
 
 // Initialize array and fill it with random values
 procedure ShuffleArray(data: TIndArray); overload;
-var i, v, vi: Integer;
+var i: Integer;
 begin
   Randomize;
   for i := 0 to TESTCOUNT-1 do data[i] := Random(TESTCOUNT);
@@ -144,7 +163,7 @@ begin
   end;
 end;
 
-// Check if the array is sorted in ascending order
+// Checks if the array is sorted in ascending order
 function isArraySortedAcc(arr: TIndArray): boolean;
 var i: Integer;
 begin
@@ -153,7 +172,18 @@ begin
   Result := i < 0;
 end;
 
-// Check if the array is sorted in ascending order
+// Checks if the indexed array is sorted in ascending order
+function isIndArraySortedAcc(arr, oarr, ind: TIndArray): boolean;
+var i: Integer;
+begin
+  i := Length(arr)-2;
+  if arr[i+1] = OArr[i+1] then
+    while (i >= 0) and (arr[ind[i]] <= arr[ind[i+1]])
+      and (arr[i] = OArr[i]) do Dec(i);
+  Result := i < 0;
+end;
+
+// Checks if the array is sorted in ascending order
 function isArraySortedStr(arr: TAnsiStringArray): boolean;
 var i: Integer;
 begin
@@ -162,7 +192,7 @@ begin
   Result := i < 0;
 end;
 
-// Check if the array is sorted in descending order
+// Checks if the array is sorted in descending order
 function isArraySortedDsc(arr: TIndArray): boolean;
 var i: Integer;
 begin
@@ -171,91 +201,113 @@ begin
   Result := i < 0;
 end;
 
-procedure TestGenericSort.PrepareArray;
-begin
-  arr := Copy(arr2, 0, Length(arr2));
-  strarr := Copy(strarr2, 0, Length(strarr2));
-end;
+{ TTestGenericSort }
 
-procedure TestGenericSort.testSortAcc;
+procedure TTestGenericSort.InitSuite();
+var i: Integer;
 begin
-  PrepareArray;
-  tmr.GetInterval(tm, True);
-  Sort(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Check(isArraySortedAcc(arr), 'Sort failed');
-end;
-
-procedure TestGenericSort.testSortStr;
-begin
-  PrepareArray;
-  tmr.GetInterval(tm, True);
-  SortStr(TESTCOUNT, strarr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Check(isArraySortedStr(strarr), 'Sort failed');
-end;
-
-procedure TestGenericSort.SetUp;
-begin
-  inherited;
-  if Length(arr2) <> TESTCOUNT then SetLength(arr2, TESTCOUNT);
-  ShuffleArray(arr2);
+  if Length(OArr) <> TESTCOUNT then SetLength(OArr, TESTCOUNT);
+  ShuffleArray(OArr);
+  if Length(ind) <> TESTCOUNT then SetLength(ind, TESTCOUNT);
+  for i := 0 to High(ind) do ind[i] := i;
 //  if Length(strarr2) <> TESTCOUNT then SetLength(strarr2, TESTCOUNT);
 //  ShuffleArray(strarr2);
 end;
 
-procedure TestGenericSort.testOldSortAcc;
+procedure TTestGenericSort.InitTest;
 begin
-  PrepareArray;
-  tmr.GetInterval(tm, True);
+  PrepareArray();
+end;
+
+procedure TTestGenericSort.PrepareArray;
+begin
+  arr := Copy(OArr, 0, Length(OArr));
+  strarr := Copy(strarr2, 0, Length(strarr2));
+end;
+
+procedure TTestGenericSort.testSortAcc;
+
+  procedure Sort(const Count: Integer; const Data: TIndArray);
+  //  const _SortOptions = [soBadData];
+    type _SortDataType = Integer;
+    function _SortCompare(const V1, V2: _SortDataType): Integer; {$I inline.inc}
+    begin
+      Result := (V1 - V2);         // As usual
+    end;
+    {$MESSAGE 'Instantiating sort algorithm <Integer>'}
+    {$I gen_algo_sort.inc}
+  end;
+
+begin
+  Sort(TESTCOUNT, arr);
+  Assert(_Check(isArraySortedAcc(arr)), GetName + ':Sort failed');
+end;
+
+procedure TTestGenericSort.testSortInd;
+
+  procedure Sort(const Count: Integer; var Data: TIndArray; var Index: array of Integer);
+  //  const _SortOptions = [soBadData];
+    type _SortDataType = Integer;
+    {$MESSAGE 'Instantiating sort algorithm <Integer> indexed'}
+    {$I gen_algo_sort.inc}
+  end;
+
+begin
+  Sort(TESTCOUNT, arr, ind);
+  Assert(_Check(isIndArraySortedAcc(arr, OArr, ind)), GetName + ':Sort failed');
+end;
+
+procedure TTestGenericSort.testSortStr;
+begin
+  SortStr(TESTCOUNT, strarr);
+  Assert(_Check(isArraySortedStr(strarr)), GetName + ':Sort failed');
+end;
+
+procedure TTestGenericSort.testOldSortAcc;
+begin
   Basics.QuickSortInt(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Check(isArraySortedAcc(arr), 'Sort failed');
+  Assert(_Check(isArraySortedAcc(arr)), 'Sort failed');
 end;
 
-procedure TestGenericSort.testOldSortStr;
+procedure TTestGenericSort.testOldSortStr;
 begin
-  PrepareArray;
-  tmr.GetInterval(tm, True);
   Basics.QuickSortStr(TESTCOUNT, strarr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Check(isArraySortedStr(strarr), 'Sort failed');
+  Assert(_Check(isArraySortedStr(strarr)), 'Sort failed');
 end;
 
-procedure TestGenericSort.testOldSortDsc;
+procedure TTestGenericSort.testOldSortDsc;
 begin
-  PrepareArray;
-  tmr.GetInterval(tm, True);
   Basics.QuickSortIntDsc(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Check(isArraySortedDsc(arr), 'Sort failed');
+  Assert(_Check(isArraySortedDsc(arr)), 'Sort failed');
 end;
 
-procedure TestGenericSort.testSortDsc;
+procedure TTestGenericSort.testSortDsc;
 begin
-  PrepareArray;
-  tmr.GetInterval(tm, True);
   SortDsc(TESTCOUNT, arr);
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
-  Check(isArraySortedDsc(arr), 'Sort failed');
+  Assert(_Check(isArraySortedDsc(arr)), GetName + ':Sort failed');
 end;
 
-function TestGenericSort.ForPair(const Key: Integer; const Value: String; Data: Pointer): Boolean;
+{ TTestCollections }
+
+function TTestCollections.ForCollEl(const e: Integer; Data: Pointer): Boolean;
+begin
+  Assert(_Check(e = Rnd.RndI(CollElCnt)), 'Value check in for each fail');
+  Result := True;
+end;
+
+{ TTestHash }
+
+function TTestHash.ForPair(const Key: Integer; const Value: String; Data: Pointer): Boolean;
 begin
 //  Writeln(Key, ' = ', Value);
-  Check((Key) = StrToInt(Value), 'Value check in for each fail');
+  Assert(_Check((Key) = StrToInt(Value)), 'Value check in for each fail');
+  Result := True;
 end;
 
-function TestGenericSort.ForCollEl(const e: Integer; Data: Pointer): Boolean;
-begin
-  Check(e = Rnd.RndI(CollElCnt), 'Value check in for each fail');
-end;
-
-procedure TestGenericSort.TestHasmMap;
+procedure TTestHash.TestHasmMap;
 var i, cnt, t: NativeInt; Map: TIntStrHashMap;
 begin
-  tmr.GetInterval(tm, True);
-  Map := TIntStrHashMap.Create(256);
+  Map := TIntStrHashMap.Create(1);
 
   cnt := 0;
   for i := 0 to HashMapElCnt-1 do begin
@@ -264,43 +316,45 @@ begin
     if not Map.ContainsKey(t) then Inc(cnt);
 
     Map[t] := IntToStr(t);
-    Check(Map.ContainsKey(t) and Map.ContainsValue(IntToStr(t)));
+    Assert(_Check(Map.ContainsKey(t) and Map.ContainsValue(IntToStr(t))));
   end;
 
   Map.ForEach(ForPair, nil);
 
-  Check(Map.Count = cnt);
+  Assert(_Check(Map.Count = cnt));
 
   Map.Clear;
-  Check(Map.IsEmpty);
-  Map.Free;
+  Assert(_Check(Map.IsEmpty));
 
-  Writeln(GetName, ': ', tmr.GetInterval(tm, True):3:3);
+  Map[t] := IntToStr(t);
+  Assert(_Check(Map.ContainsKey(t) and Map.ContainsValue(IntToStr(t))));
+
+  Map.Free;
 end;
 
-procedure TestGenericSort.TestLinkedList;
+{ TTestVector }
+
+procedure TTestVector.TestVector;
+var Coll: TIntVector; i, cnt, t: Integer;
+begin
+  Coll := TIntVector.Create();
+  {$I TestList.inc}
+end;
+
+{ TTestLinkedList }
+
+procedure TTestLinkedList.TestLinkedList;
 var Coll: TIntLinkedList; i, cnt, t: Integer;
 begin
   Coll := TIntLinkedList.Create();
   {$I TestList.inc}
 end;
 
-procedure TestGenericSort.TestVector;
-var Coll: TIntVector; i, cnt, t: Integer;
-
-begin
-  Coll := TIntVector.Create();
-  {$I TestList.inc}
-end;
-
 initialization
-  tmr := TTimer.Create(nil);
   Rnd := TRandomGenerator.Create();
-  RegisterTest(TestGenericSort.Suite);
+  RegisterSuites([TTestGenericSort, TTestCollections, TTestHash, TTestVector, TTestLinkedList]);
 
 finalization
-  tmr.Free();
   Rnd.Free();
-
 end.
 

@@ -1,6 +1,7 @@
 (*
-  Generic quicksort algorithm option constants
+  Template quicksort algorithm option constants
 *)
+
   {$IF (soDescending in _SortOptions)}
     {$DEFINE _SORTDESCENDING}
   {$IFEND}

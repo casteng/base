@@ -226,12 +226,14 @@ end;
 
 procedure TWin32AppStarter.PrintError(const Msg: string; ErrorType: TLogLevel);
 begin
-  case ErrorType of
-    lkInfo:       MessageBox(WindowHandle, PChar(Msg), 'Information', MB_ICONINFORMATION);
-    lkWarning:    MessageBox(WindowHandle, PChar(Msg), 'Warning',     MB_ICONWARNING);
-    lkError:      MessageBox(WindowHandle, PChar(Msg), 'Error',       MB_ICONERROR);
-    lkFatalError: MessageBox(WindowHandle, PChar(Msg), 'Fatal error', MB_ICONSTOP);
-  end;
+  if ErrorType = LLInfo then
+    MessageBox(WindowHandle, PChar(Msg), 'Information', MB_ICONINFORMATION)
+  else if ErrorType = LLWarning then
+    MessageBox(WindowHandle, PChar(Msg), 'Warning',     MB_ICONWARNING)
+  else if ErrorType = LLError then
+    MessageBox(WindowHandle, PChar(Msg), 'Error',       MB_ICONERROR)
+  else if ErrorType = LLFatalError then
+    MessageBox(WindowHandle, PChar(Msg), 'Fatal error', MB_ICONSTOP);
 
   Log(Msg, ErrorType);
 end;
@@ -240,7 +242,7 @@ destructor TWin32AppStarter.Destroy;
 begin
   if WindowHandle <> 0 then DestroyWindow(WindowHandle);
   if not UnRegisterClass(PChar(WindowClassName), hInstance) then
-  if Log <> nil then Log('Error unregistering window class: ' + GetOSErrorStr(GetLastError), lkError);
+  Log('Error unregistering window class: ' + GetOSErrorStr(GetLastError), lkError);
   inherited;
 end;
 

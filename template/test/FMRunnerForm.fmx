@@ -1,0 +1,89 @@
+object FMRunnerForm: TFMRunnerForm
+  Left = 0
+  Top = 0
+  Caption = 'FireMonkey Test Runner'
+  ClientHeight = 418
+  ClientWidth = 451
+  Visible = False
+  OnCreate = FormCreate
+  ActiveControl = BtnBtnRunAll
+  StyleLookup = 'backgroundstyle'
+  object TestsTree: TTreeView
+    Align = alClient
+    Position.Point = '(8,8)'
+    Width = 307.000000000000000000
+    Height = 233.000000000000000000
+    Padding.Rect = '(8,8,8,0)'
+    OnKeyUp = TestsTreeKeyUp
+    OnDblClick = TestsTreeDblClick
+    TabOrder = 0
+    ShowSizeGrip = True
+    ShowCheckboxes = True
+    OnChange = TestsTreeChange
+    OnChangeCheck = TestsTreeChangeCheck
+  end
+  object TestLog: TMemo
+    Align = alMostBottom
+    Position.Point = '(8,249)'
+    Width = 435.000000000000000000
+    Height = 161.000000000000000000
+    Padding.Rect = '(8,8,8,8)'
+    TabOrder = 1
+    KeyboardType = vktDefault
+  end
+  object ButtonsPanel: TLayout
+    Align = alRight
+    Position.Point = '(323,8)'
+    Width = 120.000000000000000000
+    Height = 233.000000000000000000
+    Padding.Rect = '(0,8,8,0)'
+    object BtnRunSelected: TCornerButton
+      Align = alBottom
+      Position.Point = '(0,118)'
+      Width = 120.000000000000000000
+      Height = 33.000000000000000000
+      Padding.Rect = '(0,8,0,0)'
+      OnClick = BtnRunSelectedClick
+      TabOrder = 0
+      Font.Family = 'Segoe UI'
+      Font.Size = 12.000000000000000000
+      Font.Style = [fsBold]
+      Text = 'RUN SELECTED'
+      XRadius = 4.000000000000000000
+      YRadius = 4.000000000000000000
+      Sides = [sdTop, sdLeft, sdBottom, sdRight]
+    end
+    object BtnRunChecked: TCornerButton
+      Align = alBottom
+      Position.Point = '(0,159)'
+      Width = 120.000000000000000000
+      Height = 33.000000000000000000
+      Padding.Rect = '(0,8,0,0)'
+      OnClick = BtnRunCheckedClick
+      TabOrder = 1
+      Font.Family = 'Segoe UI'
+      Font.Size = 12.000000000000000000
+      Font.Style = [fsBold]
+      Text = 'RUN CHECKED'
+      XRadius = 4.000000000000000000
+      YRadius = 4.000000000000000000
+      Sides = [sdTop, sdLeft, sdBottom, sdRight]
+    end
+    object BtnBtnRunAll: TCornerButton
+      Align = alMostBottom
+      Position.Point = '(0,200)'
+      Width = 120.000000000000000000
+      Height = 33.000000000000000000
+      Padding.Rect = '(0,8,0,0)'
+      OnClick = BtnBtnRunAllClick
+      TabOrder = 2
+      Font.Family = 'Segoe UI'
+      Font.Size = 16.000000000000000000
+      Font.Style = [fsBold]
+      Text = 'RUN ALL'
+      XRadius = 4.000000000000000000
+      YRadius = 4.000000000000000000
+      Sides = [sdTop, sdLeft, sdBottom, sdRight]
+    end
+  end
+end

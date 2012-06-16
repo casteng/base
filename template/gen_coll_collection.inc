@@ -1,4 +1,5 @@
-(*
+(**
+ * This file used internally.
  * Collection interface.
  * Collection is a group of elements. Can be ordered or not.
  * Elements can be accessed, inserted and removed by their position in the list (zero-based index).

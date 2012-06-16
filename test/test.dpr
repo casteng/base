@@ -3,8 +3,27 @@ program test;
 {$APPTYPE CONSOLE}
 
 //uses sysutils;
-uses 
-  SysUtils, BaseDebug, Logger, BaseTypes;
+uses
+  SysUtils, BaseDebug, Logger, BaseTypes, BaseStr, BaseRTTI, Tester;
+
+type
+  {$M+}
+  CTestClass = class of TestClass;
+  TestClass = class(TTestSuite)
+  private
+    fb: string;
+    Fa: Integer;
+    procedure Seta(const Value: Integer);
+  published
+    procedure Test1();
+    procedure Test2();
+  end;
+
+  TestClass2 = class(TestClass)
+  published
+    procedure Test1();
+  end;
+
 
 {procedure VarDispDebugHandler(Result: PVariant; const Instance: Variant;
   CallDesc: PCallDesc; Params: Pointer); cdecl;
@@ -13,36 +32,61 @@ begin
   Result^ := 11;
 end;}
 
+{ TestClass }
 
-procedure Test2;
-var func, source: shortstring; line: longint;
+procedure TestClass.Seta(const Value: Integer);
 begin
-  try
-    raise Exception.Create('My exception');
-  except
-    on E: Exception do Writeln(E.Message);
-  end;
-
-  Assert(_CodeLoc);
-  Log('Assert at ' + CodeLocToStr(LastCodeLoc));
-  LastCodeLoc.Address := ExceptAddr;
-  Assert(_Log(lkWarning), 'Logging with line number info');
-//  Assert(False, 'true assert');
-  if getLineInfo(ptruint(LastCodeLoc.Address),  func, source, line) then
-    Writeln('File name: ' + Source + ', line: ', Line)
-  else
-    Writeln('No source info for ', HexStr(ptruint(LastCodeLoc.Address), 8));
-
+  Fa := Value;
 end;
 
-//var a: Variant;  i: Integer;
+var
+  i: Integer;
+  Props, Methods: TRTTINames;
+  testc: TestClass;
+  testcr: CTestClass;
+
+procedure TestClass.Test1;
+begin
+  Log('TestClass.Test1 invoked');
+end;
+
+procedure TestClass.Test2;
+begin
+  Log('TestClass.Test2 invoked');
+  Assert(_Check(False), 'Test2');
+end;
+
+{ TestClass2 }
+
+procedure TestClass2.Test1;
+begin
+  Log('TestClass2.Test1 invoked');
+  raise Exception.Create('Exception!');
+end;
 
 begin
 //  a := IUnknown(TInterfacedObject.Create());
 //  VarDispProc := @VarDispDebugHandler;
 //  i := a.doSomething($20);
-  AddAppender(TFileAppender.Create('test.log', llFull));
-  Test2();
+
+  //AddAppender(TFileAppender.Create('test.log', llFull));
+
+{  testc := TestClass2.Create;
+
+  testcr := TestClass2;
+
+  Props := GetClassProperties(TestClass2);
+  for i := 0 to High(Props) do Log('Property: ' + Props[i]);
+  //Methods := GetInstanceMethods(TObject(testcr));
+  Methods := GetClassMethods(testc.ClassType, True);
+  for i := 0 to High(Methods) do Log('Method: ' + Methods[i]);
+
+  InvokeCommand(testc, 'Cmd');}
+
+  SetRunner(TLogTestRunner.Create);
+  RunTests([TestClass2, TestClass]);
+
   Writeln('Finished OK');
+  readln;
 end.
 

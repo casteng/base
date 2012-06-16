@@ -5,7 +5,7 @@ Usage - once per unit:
   type
     _HashMapKeyType = <some type>;
     _HashMapValueType = <some type>;
-    $I gen_coll_hashmap.inc}
+    {$I gen_coll_hashmap.inc}
 
     T<xxx><yyy>HashMap = class(_GenHashMap)
     end;
@@ -27,11 +27,11 @@ Usage - once per unit:
        Result := Value1 = Value2;
      end;]
 
-    $I gen_coll_hashmap.inc}
+    {$I gen_coll_hashmap.inc}
 
-  a compiler message with explanation which type is being instantiated would be very helpful:
-  $MESSAGE 'Instantiating TStringIntegerHashMap'
-  $I gen_coll_hashmap.inc}
+  // a compiler message with explanation which type is being instantiated would be very helpful:
+  {$MESSAGE 'Instantiating TStringIntegerHashMap'}
+  {$I gen_coll_hashmap.inc}
 *)
 
 {$IFNDEF _HASHMAPIMPL}     // Interface
@@ -56,12 +56,16 @@ Usage - once per unit:
   _HashMapKeys = array of _HashMapValueRec;
 
   _GenHashMap = class
-  protected
+  {$IFDEF HAS_STRICT}strict{$ENDIF} private
+    function GetLoadFactor(): Single;
+  {$IFDEF HAS_STRICT}strict{$ENDIF} protected
     FValues: _HashMapKeys;
     // Capacity of the hash map. Should be a power of 2.
     FCapacity,
     // Capacity mask
     FMask: __CollectionIndexType;
+    // Threshold of number of entries to capacity ratio after which capacity doubles. If zero automatic resizing doesn't occur.
+    FMaxLoadFactor: Single;
     // Grow step of bucket array
     FBucketGrowStep: __CollectionIndexType;
     // Number of entries
@@ -92,12 +96,16 @@ Usage - once per unit:
     property Values[const Key: _HashMapKeyType]: _HashMapValueType read GetValue write SetValue; default;
     // Determines hash function values range which is currently used.
     property Capacity: __CollectionIndexType read FCapacity;
+    // Threshold of number of entries to capacity ratio after which capacity doubles. If zero automatic resizing doesn't occur.
+    property MaxLoadFactor: Single read FMaxLoadFactor write FMaxLoadFactor;
+    // Current number of entries to capacity ratio
+    property LoadFactor: Single read GetLoadFactor;
     // Grow step of bucket array
     property BucketGrowStep: __CollectionIndexType read FBucketGrowStep write FBucketGrowStep;
     // Number of entries
     property Count: __CollectionIndexType read FCount write FCount;
     // Keys collection
-    property Keys: _HashMapKeys read FValues;
+    //property Keys: _HashMapKeys read FValues;
   end;
 
   {$DEFINE _HASHMAPIMPL}
@@ -163,14 +171,35 @@ Usage - once per unit:
     end;
 
     FValues[Index].Data[i].Value := Value;
+
+    if LoadFactor > FMaxLoadFactor then SetCapacity(FCapacity * 2);
   end;
 
   procedure _GenHashMap.SetCapacity(ACapacity: __CollectionIndexType);
+  var
+    i, j: __CollectionIndexType;
+    OldValues, NewValues: _HashMapKeys;
   begin
     Assert((ACapacity > 0) and (ACapacity and (ACapacity-1) = 0), 'Capacity should be greater then zero and a power of 2');
+    // Save values
+    OldValues := FValues;
+
+    // Allocate new values
     FCapacity := ACapacity;
-    SetLength(FValues, FCapacity);
+    SetLength(NewValues, FCapacity);
+    FValues := NewValues;
     FMask := FCapacity-1;
+    FCount := 0;
+
+    // Insert old values into clean map
+    for i := 0 to High(OldValues) do
+      for j := 0 to OldValues[i].Count-1 do
+        SetValue(OldValues[i].Data[j].Key, OldValues[i].Data[j].Value);
+  end;
+
+  function _GenHashMap.GetLoadFactor(): Single;
+  begin
+    Result := FCount / FCapacity;
   end;
 
   constructor _GenHashMap.Create();
@@ -182,12 +211,14 @@ Usage - once per unit:
   begin
     inherited Create();
     FBucketGrowStep := 1;
+    FMaxLoadFactor := 0.75;
     SetCapacity(Capacity);
   end;
 
   destructor _GenHashMap.Destroy();
   begin
     Clear;
+    SetLength(FValues, 0);
     inherited;
   end;
 
@@ -232,7 +263,6 @@ Usage - once per unit:
       SetLength(FValues[i].Data, 0);
       FValues[i].Count := 0;
     end;
-    SetLength(FValues, 0);
   end;
 
   {$UNDEF _HASHMAPIMPL}

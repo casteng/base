@@ -1,7 +1,7 @@
 set fpcfile=test.dpr
 
 set fpccmd=%FPC_HOME%\bin\i386-win32\fpc.exe -dDEBUG
-set fpcoptions=-Fu.. -Fu../.. -Fi.. -Fi../..
+set fpcoptions=-Fu.. -Fu../template -Fi.. -Fi../template
 set fpcoptions=%fpcoptions% -FEbin -FUtemp
 rem set fpcoptions=%fpcoptions% -Sa
 

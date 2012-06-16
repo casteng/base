@@ -271,6 +271,16 @@ type
   // Modifier keys set
   TKeyModifiers = set of TKeyModifier;
 
+  // Mouse buttons
+  TMouseButton = (// Left mouse button
+                  mbLeft,
+                  // Right mouse button
+                  mbRight,
+                  // Middle mouse button
+                  mbMiddle,
+                  // 4-th mouse button
+                  mbCustom1);
+
 const
   NullSignature: TFileSignature = (#0, #0, #0, #0);
   // Default area on image

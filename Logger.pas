@@ -167,7 +167,7 @@ uses
     SyncObjs,
   {$ENDIF}
   {$IFDEF WINDOWS}{$IFDEF DELPHI}
-    {$IFDEF DelphiXE}Winapi.Windows{$ELSE}Windows{$ENDIF},
+    {$IFDEF DelphiXE2}Winapi.Windows{$ELSE}Windows{$ENDIF},
   {$ENDIF}{$ENDIF}
   SysUtils,
   TemplateTypes;

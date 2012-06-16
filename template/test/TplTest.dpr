@@ -1,3 +1,4 @@
+{$Include GDefines.inc}
 program TplTest;
 
 uses

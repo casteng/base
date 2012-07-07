@@ -298,6 +298,8 @@ type
   function IsPowerOf2(const x: Integer): Boolean; {$I inline.inc}
   // Return power of two value next to x
   function NextPowerOf2(const x: Integer): Integer; {$I inline.inc}
+  // Returns number of trailing zeros in x
+  function CountTrailingZeros(x: Integer): Integer; {$I inline.inc}
 
   procedure RectIntersect(const ARect1, ARect2: TRect; out Result: TRect);
   function GetRectIntersect(const ARect1, ARect2: TRect): TRect;
@@ -375,6 +377,8 @@ const
   procedure SetFPUControlWord(MaskedExceptions: TFPUExceptionSet; EnableInterrupts: Boolean; Precision: TFPUPrecision; Rounding: TFPURounding; AffineInfinity: Boolean);
 
 var
+  // Table used in trailing zero count routine
+  CtzTable: array[0..31] of Byte;
   { This handler caled when an error occurs. Default handler simply logs the error class.
     Application can set its own handler to handle errors, raise exceptions, continue the workflow, etc.
     To continue the normal workflow application's handler should call <b>Invalidate()</b> method of the error message. }
@@ -952,6 +956,12 @@ begin
   Result := Result or Result shr 32;
   {$ENDIF}
   Inc(Result);
+end;
+
+function CountTrailingZeros(x: Integer): Integer;
+begin
+  {$OVERFLOWCHECKS OFF}
+  Result := CtzTable[((x and (-x)) * $077CB531) shr 27] * Ord(x > 0) + 32 * Ord(x=0);
 end;
 
 procedure RectIntersect(const ARect1, ARect2: TRect; out Result: TRect);
@@ -1642,6 +1652,12 @@ begin
   end;
 end;
 
+procedure InitTables();
+var i: Integer;
+begin
+  for i := 0 to 31 do CtzTable[($077CB531 shl i) shr 27] := i;
+end;
+
 type
   TDefaultErrorHandler = class
     // This function used as default error handler
@@ -1657,5 +1673,6 @@ type
 var err: TDefaultErrorHandler;
 
 initialization
+  InitTables();
   ErrorHandler := err.DefaultErrorHandler;
 end.

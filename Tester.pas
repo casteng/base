@@ -50,7 +50,7 @@ unit Tester;
 
 interface
 
-uses BaseTypes, Template;
+uses BaseTypes, Template, SysUtils;
 
 const
   TEST_METHOD_SIGNATURE = 'Test';
@@ -183,9 +183,11 @@ type
     procedure HandleCreateSuite(Suite: TTestSuite); virtual;
     // Called before test suite instance destroy
     procedure HandleDestroySuite(Suite: TTestSuite); virtual;
-    { Called after each test. If it returns False test running will not continue.
+    { Called after each test. If it returns False test running will stop.
       Typically retrns false of TestResult is trFail, trException or trError. }
     function HandleTestResult(const ATest: TTest; TestResult: TTestResult): Boolean; virtual; abstract;
+    // Called when an exception occurs during test.
+    procedure HandleTestException(const ATest: TTest; E: Exception); virtual; abstract;
 
     // Fills TestRoot and AllTests data structures with information from Suites vector
     procedure PrepareTests(Suites: TTestSuiteVector);
@@ -206,6 +208,7 @@ type
     function DoRun(): Boolean; override;
     function IsTestEnabled(const ATest: TTest): Boolean; override;
     function HandleTestResult(const ATest: TTest; TestResult: TTestResult): Boolean; override;
+    procedure HandleTestException(const ATest: TTest; E: Exception); override;
     procedure HandleCreateSuite(Suite: TTestSuite); override;
     procedure HandleDestroySuite(Suite: TTestSuite); override;
   end;
@@ -271,7 +274,7 @@ type
 
 implementation
 
-uses BaseRTTI, Logger, SysUtils;
+uses BaseRTTI, Logger;
 
 type
   // Exception raised when a test was failed
@@ -612,7 +615,10 @@ begin
       try
         Res := RunTest(i);
       except
-        on E: Exception do Res := trException;
+        on E: Exception do begin
+          Res := trException;
+          TestRunner.HandleTestException(FTests[i], E);
+        end;
       end;
       RunNext := TestRunner.HandleTestResult(FTests[i], Res);
     end else begin
@@ -673,6 +679,12 @@ begin
     trException: Log('  exception');
     trError: Log('  error');
   end;
+end;
+
+procedure TLogTestRunner.HandleTestException(const ATest: TTest; E: Exception);
+begin
+  if Assigned(E) then
+    LogError('Exception in test "' + ATest.Name + '" with message: ' + E.Message);
 end;
 
 function TLogTestRunner.IsTestEnabled(const ATest: TTest): Boolean;

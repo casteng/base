@@ -252,7 +252,11 @@ begin
   if not Result then Exit;
 
   if Msg.ClassType = TMouseClickMsg then with TMouseClickMsg(Msg) do begin
-    if (Button = IK_MOUSELEFT) and Hover then if VariantIndex < TotalVariants-1 then VariantIndex := VariantIndex + 1 else VariantIndex := 0;
+    if (Button = mbLeft) and Hover then
+      if VariantIndex < TotalVariants-1 then
+        VariantIndex := VariantIndex + 1
+      else
+        VariantIndex := 0;
   end;
 end;
 
@@ -292,7 +296,7 @@ end;
 function TCheckBox.GUIHandleMessage(const Msg: TMessage): Boolean;
 begin
   Result := inherited GUIHandleMessage(Msg);
-  if Hover and (Msg.ClassType = TMouseClickMsg) and (TMouseClickMsg(Msg).Button = IK_MOUSELEFT) then
+  if Hover and (Msg.ClassType = TMouseClickMsg) and (TMouseClickMsg(Msg).Button = mbLeft) then
     Checked := not Checked;
 end;
 
@@ -578,13 +582,13 @@ begin
     end;
   end;
   if Msg.ClassType = TMouseDownMsg then with TMouseDownMsg(Msg) do begin
-    if (Button = IK_MOUSELEFT) and Hover then begin
+    if (Button = mbLeft) and Hover then begin
       Pushed := True;
       UpdateVisualParameters;
     end;
   end;
   if Msg.ClassType = TMouseUpMsg then with TMouseDownMsg(Msg) do begin
-    if (Button = IK_MOUSELEFT) then begin
+    if (Button = mbLeft) then begin
       Pushed := False;
       UpdateVisualParameters;
     end;

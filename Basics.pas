@@ -386,6 +386,7 @@ var
 
   // Key codes
   //
+  IK_NONE: Integer = 0;
   IK_ESCAPE,
   IK_1, IK_2, IK_3, IK_4, IK_5, IK_6, IK_7, IK_8, IK_9, IK_0,
   IK_MINUS, IK_EQUALS, IK_BACK, IK_TAB,
@@ -441,6 +442,7 @@ var
   IK_UPARROW, IK_PGUP, IK_LEFTARROW, IK_RIGHTARROW, IK_DOWNARROW, IK_PGDN,
   IK_PREVTRACK, IK_MOUSELEFT, IK_MOUSERIGHT, IK_MOUSEMIDDLE,
   IK_SHIFT, IK_CONTROL, IK_ALT: Integer;
+  IK_MOUSEBUTTON: array[TMouseButton] of Integer;
 
 implementation
 

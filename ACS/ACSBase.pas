@@ -1121,15 +1121,15 @@ begin
     end;
 
     if Msg.ClassType = TMouseDownMsg then with TMouseDownMsg(Msg) do begin
-      if (Button = IK_MOUSELEFT) and Hover then begin
+      if (Button = mbLeft) and Hover then begin
         ReturnMessage(TGUIDownMsg.Create(Self));
         if CanBeFocused then Focused := True;
         Pushed := True;
         UpdateVisualParameters;
       end;
     end else if Msg.ClassType = TMouseUpMsg then with TMouseUpMsg(Msg) do begin
-      if (Button = IK_MOUSELEFT) then begin
-        if Pushed and Hover then HandleClick(Button, X, Y);
+      if (Button = mbLeft) then begin
+        if Pushed and Hover then HandleClick(IK_MOUSELEFT, X, Y);
         Pushed := False;
         UpdateVisualParameters;
       end;
@@ -1147,11 +1147,15 @@ begin
         if Key = GetGUIRoot.KeyUp   then SendMessage(TGUIFocusPrev.Create(Self), GetGUIRoot, [mfRecipient]);
       end;
       if Msg.ClassType = TKeyDownMsg then with TKeyDownMsg(Msg) do
-        if Key = GetGUIRoot.KeyEnter then begin Pushed := True; UpdateVisualParameters; end;
+        if Key = GetGUIRoot.KeyEnter then begin
+          Pushed := True;
+          UpdateVisualParameters;
+        end;
       if Msg.ClassType = TKeyUpMsg then with TKeyUpMsg(Msg) do
         if Key = GetGUIRoot.KeyEnter then begin
           if Pushed then HandleClick(Key, 0, 0);
-          Pushed := False; UpdateVisualParameters;
+          Pushed := False;
+          UpdateVisualParameters;
         end;
     end;    
   end;

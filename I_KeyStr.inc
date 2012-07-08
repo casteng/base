@@ -1,3 +1,4 @@
+  KeyStr[IK_NONE]            :='NONE';
   // $67 to $6F unassigned
   KeyStr[IK_KANA]            :='KANA';    (* (Japanese keyboard)            *)
   KeyStr[IK_ABNT_C1]         :='ABNT C1'; (* / ? on Portugese (Brazilian) keyboards *)

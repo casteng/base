@@ -9,7 +9,7 @@ unit WInput;
 
 interface
 
-uses Basics, BaseMsg, OSUtils, Input;
+uses Basics, BaseMsg, BaseTypes, OSUtils, Input;
 
 type
   // OS-routines based controller implementation
@@ -42,9 +42,9 @@ begin
   with MouseState do begin
     lX := MouseX - LastMouseX;
     lY := MouseY - LastMouseY;
-    Buttons[0] := Ord(GetAsyncKeyState(IK_MOUSELEFT)   < 0) * 128;
-    Buttons[1] := Ord(GetAsyncKeyState(IK_MOUSERIGHT)  < 0) * 128;
-    Buttons[2] := Ord(GetAsyncKeyState(IK_MOUSEMIDDLE) < 0) * 128;
+    Buttons[mbLeft]   := GetAsyncKeyState(IK_MOUSELEFT)   < 0;
+    Buttons[mbRight]  := GetAsyncKeyState(IK_MOUSERIGHT)  < 0;
+    Buttons[mbMiddle] := GetAsyncKeyState(IK_MOUSEMIDDLE) < 0;
   end;
   
   if MouseCapture then SetCursorCapturePos else begin

@@ -270,7 +270,7 @@ begin
   if not Result then Exit;
 
   if Msg.ClassType = TMouseClickMsg then with TMouseClickMsg(Msg) do begin
-    if (Button = IK_MOUSELEFT) and Hover then
+    if (Button = mbLeft) and Hover then
       if ItemIndex < FItems.TotalItems-1 then ItemIndex := ItemIndex + 1 else ItemIndex := 0;
   end;
 end;
@@ -465,7 +465,9 @@ begin
   Result := inherited GUIHandleMessage(Msg);
   if not Result then Exit;
 
-  if Msg.ClassType = TMouseClickMsg then if Hover then with TMouseClickMsg(Msg) do HandleClick(Button, X, Y);
+  if Msg.ClassType = TMouseClickMsg then
+    if Hover then
+      with TMouseClickMsg(Msg) do HandleClick(IK_MOUSEBUTTON[Button], X, Y);
 end;
 
 procedure TComboList.ReturnMessage(const Msg: TMessage);

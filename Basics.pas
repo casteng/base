@@ -90,7 +90,13 @@ type
 
   { @Abstract(Reference-counted container of temporary objects and memory buffers )
     Create an instance with @Link(CreateRefcountedContainer). The container can be used to accumulate temporary objects and buffers.
-    When no more references points to the container it destroys itself and all accumulated objects and buffers. }
+    When no more references points to the container it destroys itself and all accumulated objects and buffers.
+    Usage:
+    with CreateRefcountedContainer do begin
+      obj := TSomeObject.Create();
+      Container.AddObject(obj);
+    end;
+    The container and all added objects will be destroyed after the current routine execution (but not after "with" statement end). }
   IRefcountedContainer = interface
     // Adds an object instance
     function AddObject(Obj: TObject): TObject;
@@ -100,6 +106,10 @@ type
     procedure AddObjects(Objs: array of TObject);
     // Adds an array of memory buffers
     procedure AddPointers(Ptrs: array of Pointer);
+    // Returns self for use within "with" statement
+    function GetContainer(): IRefcountedContainer;
+    // Returns self for use within "with" statement
+    property Container: IRefcountedContainer read GetContainer;
   end;
 
   { @Abstract(Base class for streams)
@@ -298,6 +308,8 @@ type
   function IsPowerOf2(const x: Integer): Boolean; {$I inline.inc}
   // Return power of two value next to x
   function NextPowerOf2(const x: Integer): Integer; {$I inline.inc}
+  // Returns number of trailing zeros in x
+  function CountTrailingZeros(x: Integer): Integer; {$I inline.inc}
 
   procedure RectIntersect(const ARect1, ARect2: TRect; out Result: TRect);
   function GetRectIntersect(const ARect1, ARect2: TRect): TRect;
@@ -375,6 +387,8 @@ const
   procedure SetFPUControlWord(MaskedExceptions: TFPUExceptionSet; EnableInterrupts: Boolean; Precision: TFPUPrecision; Rounding: TFPURounding; AffineInfinity: Boolean);
 
 var
+  // Table used in trailing zero count routine
+  CtzTable: array[0..31] of Byte;
   { This handler caled when an error occurs. Default handler simply logs the error class.
     Application can set its own handler to handle errors, raise exceptions, continue the workflow, etc.
     To continue the normal workflow application's handler should call <b>Invalidate()</b> method of the error message. }
@@ -382,6 +396,7 @@ var
 
   // Key codes
   //
+  IK_NONE: Integer = 0;
   IK_ESCAPE,
   IK_1, IK_2, IK_3, IK_4, IK_5, IK_6, IK_7, IK_8, IK_9, IK_0,
   IK_MINUS, IK_EQUALS, IK_BACK, IK_TAB,
@@ -437,6 +452,7 @@ var
   IK_UPARROW, IK_PGUP, IK_LEFTARROW, IK_RIGHTARROW, IK_DOWNARROW, IK_PGDN,
   IK_PREVTRACK, IK_MOUSELEFT, IK_MOUSERIGHT, IK_MOUSEMIDDLE,
   IK_SHIFT, IK_CONTROL, IK_ALT: Integer;
+  IK_MOUSEBUTTON: array[TMouseButton] of Integer;
 
 implementation
 
@@ -470,6 +486,7 @@ type
     function AddPointer(Ptr: Pointer): Pointer;
     procedure AddObjects(Objs: array of TObject);
     procedure AddPointers(Ptrs: array of Pointer);
+    function GetContainer(): IRefcountedContainer;
   end;
 
 procedure SetFPUControlWord(MaskedExceptions: TFPUExceptionSet; EnableInterrupts: Boolean; Precision: TFPUPrecision; Rounding: TFPURounding; AffineInfinity: Boolean);
@@ -954,6 +971,12 @@ begin
   Inc(Result);
 end;
 
+function CountTrailingZeros(x: Integer): Integer;
+begin
+  {$OVERFLOWCHECKS OFF}
+  Result := CtzTable[((x and (-x)) * $077CB531) shr 27] * Ord(x > 0) + 32 * Ord(x=0);
+end;
+
 procedure RectIntersect(const ARect1, ARect2: TRect; out Result: TRect);
 begin
   Result.Left   := MaxI(ARect1.Left,   ARect2.Left);
@@ -1061,6 +1084,11 @@ procedure TRefcountedContainer.AddPointers(Ptrs: array of Pointer);
 var i: Integer;
 begin
   for i := Low(Ptrs) to High(Ptrs) do AddPointer(Ptrs[i]);
+end;
+
+function TRefcountedContainer.GetContainer: IRefcountedContainer;
+begin
+  Result := Self;
 end;
 
 { TStream }
@@ -1642,6 +1670,12 @@ begin
   end;
 end;
 
+procedure InitTables();
+var i: Integer;
+begin
+  for i := 0 to 31 do CtzTable[($077CB531 shl i) shr 27] := i;
+end;
+
 type
   TDefaultErrorHandler = class
     // This function used as default error handler
@@ -1657,5 +1691,6 @@ type
 var err: TDefaultErrorHandler;
 
 initialization
+  InitTables();
   ErrorHandler := err.DefaultErrorHandler;
 end.

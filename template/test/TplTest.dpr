@@ -3,8 +3,8 @@ program TplTest;
 
 uses
   Tester,
-  {$IFDEF Delphi}
-    FMRunnerForm,         // Uncomment for FireMonkey based test runner
+  {$IFDEF FireMonkey}
+    FMRunnerForm,         // Uncomment for FireMonkey based test runner in Delphi XE 2+
   {$ENDIF}
   GenTestU;
 

@@ -7,7 +7,7 @@
 {$IFDEF VER200} {$DEFINE Delphi} {$DEFINE Delphi2005} {$DEFINE Delphi2006} {$DEFINE Delphi2009} {$ENDIF} // Delphi 2009
 {$IFDEF VER210} {$DEFINE Delphi} {$DEFINE Delphi2005} {$DEFINE Delphi2006} {$DEFINE Delphi2009} {$ENDIF} // Delphi 2010
 {$IFDEF VER220} {$DEFINE Delphi} {$DEFINE Delphi2005} {$DEFINE Delphi2006} {$DEFINE Delphi2009} {$DEFINE DelphiXE} {$ENDIF} // Delphi XE
-{$IFDEF VER230} {$DEFINE Delphi} {$DEFINE Delphi2005} {$DEFINE Delphi2006} {$DEFINE Delphi2009} {$DEFINE DelphiXE} {$ENDIF} // Delphi XE2
+{$IFDEF VER230} {$DEFINE Delphi} {$DEFINE Delphi2005} {$DEFINE Delphi2006} {$DEFINE Delphi2009} {$DEFINE DelphiXE} {$DEFINE FireMonkey} {$ENDIF} // Delphi XE2
 
 {$IFDEF UNICODE}
   {$STRINGCHECKS OFF}

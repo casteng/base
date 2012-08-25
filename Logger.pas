@@ -114,7 +114,8 @@ type
 
     This call will log the message with source filename and Line number
     Always returns False. }
-  function _Log(Level: TLogLevel): Boolean;
+  function _Log(Level: TLogLevel): Boolean; overload;
+  function _Log(): Boolean; overload;
 
   // Adds an appender to list of registered appenders. All registered appenders will be destroyed on shutdown.
   procedure AddAppender(Appender: TAppender);
@@ -301,13 +302,18 @@ begin
   Log(Message, CodeLocation, AssertLogLevel);
 end;
 
-function _Log(Level: TLogLevel): Boolean;
+function _Log(Level: TLogLevel): Boolean; overload;
 begin
   if AssertHook(@LogAssert) then begin
     AssertLogLevel := Level;
     Result := False;
   end else
     Result := True;  // Prevent assertion error if hook failed
+end;
+
+function _Log(): Boolean; overload;
+begin
+  _Log(LLInfo);
 end;
 
 // Returns index of the appender or -1 if not found

@@ -39,7 +39,7 @@ type
   TJItems = class
   protected
     FQuery: TJuggleQuery;
-    FItems: TItems;          // do not allow duplicate items
+    FItems: TItems;          // ToFix: change to colleection, do not allow null and duplicate items
     FCount: Integer;
 
     function FilterByName(Item: TItem): TExtractCondition;
@@ -51,12 +51,13 @@ type
   protected
     // Query string which used to create this instance
     property Query: TJuggleQuery read FQuery;
-
   public
     // Filtering
-    // Filters the current set by performing the query over it and returns the result in a new TJItems instance
+    // Returns set with the first item in current set or nil if the set is empty
+    function First(): TJItems;
+    // [NOT IMPLEMENTED] Filters the current set by performing the query over it and returns the result in a new TJItems instance
     function Filter(const Query: TJuggleQuery): TJItems; overload;
-    // Finds items of the specified class or its descendant from the current set and returns the result in a new TJItems instance
+    // [NOT IMPLEMENTED] Finds items of the specified class or its descendant from the current set and returns the result in a new TJItems instance
     function Filter(ItemClass: CItem): TJItems; overload;
 
     // Calls the delegate for each item in the current set and returns self
@@ -77,8 +78,8 @@ type
     // Properties set
     // Sets the specified property for all items in the current set and returns self
     function Prop(PropertyName: TPropertyName; PropertyValue: TPropertyValue): TJItems;
-    // [NOT IMPLEMENTED] Sets the specified as JSON property set for all items in the current set and returns self
-    function Props(Properties: TPropertyPairs): TJItems;
+    // Sets the specified as JSON property set for all items in the current set and returns self
+    function Props(json: TJSONString): TJItems;
 
     // Turns on the visibility of each item in the current set and returns self
     function Show(): TJItems;
@@ -86,6 +87,9 @@ type
     function Hide(): TJItems;
     // Toggles the visibility of each item in the current set and returns self
     function Toggle(): TJItems;
+
+    // Number of items in current query set
+    property Count: Integer read FCount;
 
     {$I juggle_ext.inc}
 
@@ -176,7 +180,7 @@ constructor TJItems.CreateWithFilter(CurrentItems: TItems; const AQuery: TJuggle
 var i, lastDelimPos: Integer; PropertyQuery: Boolean;
 begin
   if Jug = nil then begin
-    Log('Juggle: Call InitJuggle() before use');
+    LogError('Juggle: Call InitJuggle() before use');
     Exit;
   end;
 
@@ -313,6 +317,16 @@ begin
   Result.FCount := Length(Result.FItems);
 end;
 
+function TJItems.First: TJItems;
+begin
+  Result := TJItems.Create();
+  if Count > 0 then begin
+    SetLength(Result.FItems, 1);
+    Result.FCount := 1;
+    Result.FItems[0] := FItems[0];
+  end;
+end;
+
 function TJItems.Filter(ItemClass: CItem): TJItems;
 begin
 
@@ -327,12 +341,15 @@ function TJItems.Prop(PropertyName: TPropertyName; PropertyValue: TPropertyValue
 var i: Integer;
 begin
   Result := Self;
-  for i := 0 to High(FItems) do if Assigned(FItems[i]) then FItems[i].SetProperty(PropertyName, PropertyValue);
+  for i := 0 to High(FItems) do if Assigned(FItems[i]) then
+    FItems[i].SetProperty(PropertyName, PropertyValue);
 end;
 
-function TJItems.Props(Properties: TPropertyPairs): TJItems;
+function TJItems.Props(json: TJSONString): TJItems;
+var i: Integer;
 begin
-
+  for i := 0 to High(FItems) do if Assigned(FItems[i]) then
+    BaseClasses.SetupFromJSON(FItems[i], json, Jug.FManager);
 end;
 
 {$I juggle_ext.inc}

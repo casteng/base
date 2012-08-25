@@ -172,6 +172,8 @@ type
     function GetTotalTests: Integer;
     function GetTest(Index: Integer): TTest;
   protected
+    // Number of test with a certain result
+    Stats: array[TTestResult] of Integer;
     // Should run all tests and return True if all tests passed successfully
     function DoRun(): Boolean; virtual; abstract;
     // Returns test level containing tests of the specified class or nil if not found
@@ -203,6 +205,7 @@ type
     destructor Destroy; override;
   end;
 
+  // Test runner implementation which outputs test results to log
   TLogTestRunner = class(TTestRunner)
   protected
     function DoRun(): Boolean; override;
@@ -473,7 +476,9 @@ begin
 end;
 
 function TTestRunner.Run(Suites: TTestSuiteVector): Boolean;
+var i: TTestResult;
 begin
+  for i := Low(TTestResult) to High(TTestResult) do Stats[i] := 0;
   PrepareTests(TestSuites);
   Result := DoRun();
 end;
@@ -628,6 +633,7 @@ begin
         FTests[i].LastResult := trSkipped;
       RunNext := TestRunner.HandleTestResult(FTests[i], FTests[i].LastResult) and RunNext;
     end;
+    Inc(TestRunner.Stats[FTests[i].LastResult]);
     Inc(i);
   end;
   Result := i >= Length(FTests);
@@ -656,6 +662,14 @@ end;
 function TLogTestRunner.DoRun(): Boolean;
 begin
   Result := TestRoot.Run(crcAlways);
+
+  Log('Test result statistics:');
+  Log('  Not run:   ' + IntToStr(Stats[trNone]));
+  Log('  Disabled:  ' + IntToStr(Stats[trDisabled]));
+  Log('  Passed:    ' + IntToStr(Stats[trSuccess]));
+  Log('  Failed:    ' + IntToStr(Stats[trFail]));
+  Log('  Exception: ' + IntToStr(Stats[trException]));
+  Log('  Error:     ' + IntToStr(Stats[trError]));
 end;
 
 procedure TLogTestRunner.HandleCreateSuite(Suite: TTestSuite);

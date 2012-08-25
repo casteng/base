@@ -10,11 +10,7 @@ unit json;
 
 interface
 
-uses BaseMsg, BaseTypes, BaseStr, Props;
-
-const
-  // Minimum capacity of JSON data structures
-  minJSONCapacity = 16;
+uses BaseMsg, BaseTypes, BaseStr, Template;
 
 type
   // Type to represent characters
@@ -24,242 +20,395 @@ type
   // Type to represent unmanaged strings
   TJSONPChar = PAnsiChar;
 
-
-  TJSONArray = Pointer;
-
   // Possible JSON value types
   TJSONValueType = (jvString, jvNumber, jvBoolean, jvObject, jvArray);
 
+const
+  // JSON quote character
+  JSON_QUOTE_CHAR = TJSONChar('"');
+  // Not a number constant
+  NAN: Double = 0.0 / 0.0;
+
+type
+  // Error which will be generated when a parsing error occurs
+  TParseError = class(TError) end;
+
+  TJSON = class;
+
+  // Immutable JSON value instance
+  TJSONValue = class(TObject)
+  private
+    fStart, fEnd: Integer;
+    fSrc: TJSONString;
+    fType: TJSONValueType;
+    fNum: Double;
+    fObject: TJSON;
+    fArray: array of TJSONValue;
+    function GetAsString: TJSONString;
+    function GetAsBoolean: Boolean;
+    function GetAsArray(index: Integer): TJSONValue;
+    procedure skipSpace();
+    procedure doParse();
+    procedure parseToken();
+    procedure parseStr();
+    procedure parseNum;
+    procedure parseObject;
+  public
+    // Construct the value instance from a JSON value string, starting from StartIndex character (WideChar element for unicode)
+    constructor Create(const ASrc: TJSONString; StartIndex: Integer = 1);
+
+    // Value type
+    property ValueType: TJSONValueType read fType;
+    // String value
+    property asStr: TJSONString read GetAsString;
+    // Numeric value if fType is jvNumber or NAN otherwise
+    property asNum: Double read fNum;
+    // Boolean value
+    property asBool: Boolean read GetAsBoolean;
+    // Object value
+    property asObj: TJSON read fObject;
+    // Array value if fType is jvArray or nil otherwise
+    property asArray[index: Integer]: TJSONValue read GetAsArray; //default;
+  end;
+
+  // Name-value hash map type instantiation
+  _HashMapKeyType = TJSONString;
+  _HashMapValueType = TJSONValue;
+  {$I gen_coll_hashmap.inc}
+  TJSONNameValueHashMap = _GenHashMap;
+  TJSONNamesIterator = _GenHashMapKeyIterator;
+
+  // JSON method callback called when a new name/value pair just parsed for object Obj
+  TJSONDataDelegate = procedure(const Obj: TJSON; const Name: TJSONString; Value: TJSONValue) of object;
+
   { @Abstract(JSON parser/generator class)
-    The class will parse JSON data from Source property which can be initially set by passing a value to constructor.
-    The Source property can be changed at any time which will cause parsing of the property value.
-    Read of the Source property will cause reverse to parsing process if some value set was changed.
+    The class will parse JSON data passed to constructor.
+    TODO: modifyable values. Read of the Source property will cause reverse to parsing process if some value set was changed.
     The data can be then obtained with Names, Values and ValueTypes properties as well as through asProperties property.
   }
-  TJSONAnsi = class
+  TJSON = class(TObject)
   private
     fSrc: TJSONString;
     fPos: Integer;
-    fErrorHandler: TErrorHandler;
-    fNames, fValues: array of TJSONString;
-    fValueTypes: array of TJSONValueType;
-    fProperties: TProperties;
-    fCount, fCapacity: Integer;
-    procedure setCapacity(aCapacity: Integer);
+    fDataMethod: TJSONDataDelegate;
+    fValues: TJSONNameValueHashMap;
+    fCount: Integer;
+
+    function getThis: TJSON;
+    function getValue(const name: TJSONString): TJSONValue;
+
     procedure skipSpace();
-    function checkChar(ch: TJSONChar; mandatory: Boolean): Boolean;
-    function parseNum(): TJSONString;
-    function parseToken(): TJSONString;
     function parseStr(): TJSONString;
-    function parseVal(): Boolean;
-    function parsePair(): Boolean;
-    procedure doParse;
-    function getName(index: Integer): TJSONString; {$I inline.inc}
-    function getValueByIndex(index: Integer): TJSONString;
-    function getValueTypeByIndex(index: Integer): TJSONValueType;
-    procedure setSource(const Value: TJSONString);
+    function checkChar(ch: TJSONChar; mandatory: Boolean): Boolean;
+    procedure parsePair();
+    procedure doParse();
+    procedure ForEachDelegate(const key: _HashMapKeyType; const value: _HashMapValueType; Data: Pointer);
+
+  protected
+    // Default data delegate. May be overridden.
+     procedure DefDataDelegate(const Obj: TJSON; const Name: TJSONString; Value: TJSONValue); virtual;
   public
-    // Creates an instance of the class. With aSrc initial JSON data can be specified.
-    constructor Create(const aSrc: TJSONString; aErrorHandler: TErrorHandler = nil);
+    // Creates an instance of the class with aSrc JSON data.
+    constructor Create(const aSrc: TJSONString; DataMethod: TJSONDataDelegate = nil);
+    // Creates an instance of the class with JSON data starting from aStart character in aSrc.
+    constructor CreateEx(const aSrc: TJSONString; aStart: Integer; DataMethod: TJSONDataDelegate);
     // Destroys an instance of the class
     destructor Destroy; override;
-    // Returns index corresponding to the name
-    function getNameIndex(const name: TJSONString): Integer;
+    // Sets global for the whole unit error handler
+    class procedure setErrorHandler(AErrorHandler: TErrorHandler);
+    // Returns True if the JSON contains name
+    function Contains(const Name: TJSONString): Boolean;
+    // Call the specified delegate for each name/value pair
+    procedure ForEach(DataMethod: TJSONDataDelegate);
+    // Returns iterator over all existing names
+    function GetNamesIterator(): TJSONNamesIterator;
 
-    { Current JSON representation of data. Setting this property will cause parsing of its contents.
-      If the property is read JSON representation of the data conained by the class will be generated. }
-    property Source: TJSONString read fSrc write setSource;
-    // error handler to call when an error occures
-    property errorHandler: TErrorHandler read fErrorHandler;
-    // List of names of values
-    property Names[index: Integer]: TJSONString read getName;
-    // List of values accessible by index
-    property ValuesByIndex[index: Integer]: TJSONString read getValueByIndex;
-    // List of value types accessible by index
-    property ValueTypesByIndex[index: Integer]: TJSONValueType read getValueTypeByIndex;
+    // Instance reference
+    property This: TJSON read getThis;
+    // Number of values
+    property Count: Integer read fCount;
+    // Source JSON string
+    property Source: TJSONString read fSrc;
+    // Values
+    property Values[const Name: TJSONString]: TJSONValue read GetValue; default;
   end;
 
 implementation
 
 uses SysUtils;
 
-const
-  JSONToPropertyType: array[TJSONValueType] of Integer=(vtString, vtDouble, vtBoolean, vtNone, vtNone);
+{$MESSAGE 'Instantiating TJSONNameValueHashMap implementation'}
+{$I gen_coll_hashmap.inc}
+
+var
+  // Error handler to call when an error occur
+  ErrorHandler: TErrorHandler;
+
+function IsNanDouble(const AValue: Double): Boolean;
+begin
+  Result := ((PInt64(@AValue)^ and $7FF0000000000000)  = $7FF0000000000000) and
+            ((PInt64(@AValue)^ and $000FFFFFFFFFFFFF) <> $0000000000000000);
+end;
+
+{ TJSONValue }
+
+function TJSONValue.GetAsString: TJSONString;
+begin
+  Result := Copy(fSrc, fStart, fEnd-fStart);
+end;
+
+function TJSONValue.GetAsBoolean: Boolean;
+begin
+  Result := fNum = 1.0;
+end;
+
+function TJSONValue.GetAsArray(index: Integer): TJSONValue;
+begin
+  Result := nil;
+end;
+
+procedure TJSONValue.skipSpace;
+begin
+  while (fStart <= length(fSrc)) and (fSrc[fStart] = ' ') do inc(fStart);
+end;
+
+// token = "true" | "false" | "null".
+procedure TJSONValue.parseToken();
+begin
+  while (fEnd <= length(fSrc))
+    and CharInSet(UpCase(fSrc[fEnd]), ['T', 'R', 'U', 'E', 'F', 'A', 'L', 'S', 'N'])
+  do
+    inc(fEnd);
+end;
+
+// str = """text""".
+procedure TJSONValue.parseStr();
+begin
+  fType := jvString;
+  if fSrc[fEnd] = JSON_QUOTE_CHAR then begin
+    Inc(fStart);
+    Inc(fEnd);
+    while (fEnd <= length(fSrc)) and (fSrc[fEnd] <> JSON_QUOTE_CHAR) do inc(fEnd);
+    if fEnd > length(fSrc) then
+      if Assigned(ErrorHandler) then errorHandler(TError.Create('unclosed string constant at ' + intToStr(fStart)));
+  end else
+    if Assigned(ErrorHandler) then errorHandler(TError.Create('string expected at ' + intToStr(fEnd)));
+end;
+
+// num = {digit} [.{digit}].
+procedure TJSONValue.parseNum();
+begin
+  while (fEnd <= length(fSrc))
+    and CharInSet(fSrc[fEnd], ['0'..'9', '.', '+', '-', 'e', 'E'])
+  do
+    inc(fEnd);
+
+  fNum := StrToRealDef(Copy(fSrc, fStart, fEnd-fStart), NAN);
+  if IsNanDouble(fNum) then
+    if Assigned(ErrorHandler) then errorHandler(TParseError.Create('Invalid numeric constant at ' + intToStr(fStart)));
+end;
+
+procedure TJSONValue.parseObject();
+begin
+  fObject := TJSON.CreateEx(fSrc, fStart, nil);
+  fType   := jvObject;
+  fEnd    := fObject.fPos;
+end;
+
+// val = str | num | "true" | "false" | "null" | rec | arr.
+procedure TJSONValue.doParse;
+begin
+  fEnd := fStart;
+  case UpCase(fSrc[fStart]) of
+    JSON_QUOTE_CHAR: parseStr();
+    'T': begin
+      parseToken();
+      if UpperCase(GetAsString()) = 'TRUE' then begin
+        fNum := 1.0;
+        fType := jvBoolean;
+      end else
+        if Assigned(ErrorHandler) then errorHandler(TParseError.Create('"true" expected at ' + intToStr(fStart)));
+    end;
+    'F': begin
+      parseToken();
+      if UpperCase(GetAsString()) = 'FALSE' then begin
+        fNum := 0.0;
+        fType := jvBoolean;
+      end else
+        if Assigned(ErrorHandler) then errorHandler(TParseError.Create('"false" expected at ' + intToStr(fStart)));
+    end;
+    'N': begin
+      parseToken();
+      if UpperCase(GetAsString()) = 'NULL' then begin
+        fObject := nil;
+        fType := jvObject;
+      end else
+        if Assigned(ErrorHandler) then errorHandler(TParseError.Create('"null" expected at ' + intToStr(fStart)));
+    end;
+    '{': parseObject();
+    '[': ;
+    else begin
+      parseNum();
+      fType := jvNumber;
+    end;
+  end;
+end;
+
+constructor TJSONValue.Create(const ASrc: TJSONString; StartIndex: Integer);
+begin
+  fSrc   := ASrc;
+  fStart := StartIndex;
+  fType  := jvString;
+  fNum   := NAN;
+  skipSpace();
+  if fEnd <= length(fSrc) then doParse();
+end;
+
+{ TJSON }
 
         (* rec  = "{" [pair] [{"," pair}] "}".
-         * pair = str ":" val.
+         * pair = ["""]text["""] ":" val.
          * str  = """text""".
          * val = str | num | "true" | "false" | "null" | rec | arr.
          * num  = {digit} [.{digit}].
          * arr  = "[" [val] [{, val}] "]".
          *)
 
-  procedure TJSONAnsi.setCapacity(aCapacity: Integer);
-  begin
-    fCapacity := aCapacity;
-    if fCapacity < minJSONCapacity then fCapacity := minJSONCapacity;
-    SetLength(fNames,      fCapacity);
-    SetLength(fValues,     fCapacity);
-    SetLength(fValueTypes, fCapacity);
+function TJSON.getThis: TJSON;
+begin
+  Result := Self;
+end;
+
+function TJSON.getValue(const name: TJSONString): TJSONValue;
+begin
+  Result := fValues[name];
+end;
+
+procedure TJSON.skipSpace();
+begin
+  while (fPos <= length(fSrc)) and (fSrc[fPos] = ' ') do inc(fPos);
+end;
+
+function TJSON.checkChar(ch: TJSONChar; mandatory: Boolean): Boolean;
+begin
+  skipSpace();
+  if (fPos <= length(fSrc)) and (fSrc[fPos] = ch) then begin
+    inc(fPos);
+    result := True;
+  end else begin
+    if mandatory and Assigned(ErrorHandler) then errorHandler(TError.Create('"' + ch + '" expected at ' + intToStr(fPos)));
+    result := False;
   end;
+end;
 
-  procedure TJSONAnsi.skipSpace();
-  begin
-    while (fPos <= length(fSrc)) and (fSrc[fPos] = ' ') do inc(fPos);
-  end;
+// str = ["""]text["""].
+function TJSON.parseStr(): TJSONString;
+var
+  startPos: Integer;
+  termChar: TJSONChar;
+begin
+  result := '';
+  skipSpace();
+  if fSrc[fPos] = JSON_QUOTE_CHAR then begin
+    termChar := JSON_QUOTE_CHAR;
+    inc(fPos);
+  end else
+    termChar := ':';
 
-  function TJSONAnsi.checkChar(ch: AnsiChar; mandatory: Boolean): Boolean;
-  begin
-    skipSpace();
-    if (fPos <= length(fSrc)) and (fSrc[fPos] = ch) then begin
-      inc(fPos);
-      result := True;
-    end else begin
-      if mandatory and Assigned(ErrorHandler) then errorHandler(TError.Create('"' + ch + '" expected at ' + intToStrA(fPos)));
-      result := False;
-    end;
-  end;
+  startPos := fPos;
+  while (fPos <= length(fSrc)) and (fSrc[fPos] <> termChar) do inc(fPos);
 
-  // num = {digit} [.{digit}].
-  function TJSONAnsi.parseNum(): AnsiString;
-  var startPos: Integer;
-  begin
-    startPos := fPos;
-    while (fPos <= length(fSrc)) and (fSrc[fPos] in ['0'..'9', '.', '+', '-', 'e', 'E']) do inc(fPos);
-    Result := Copy(fSrc, startPos, fPos-startPos);
-  end;
+  if (fPos <= length(fSrc)) then begin
+    result := copy(fSrc, startPos, fPos-startPos);
+    if termChar = JSON_QUOTE_CHAR then Inc(fPos);                          // Skip closing quote
+  end else
+    if (termChar = JSON_QUOTE_CHAR) and Assigned(ErrorHandler) then
+      errorHandler(TParseError.Create('unclosed string constant at ' + intToStr(fPos)));
+end;
 
-  // token = "true" | "false" | "null".
-  function TJSONAnsi.parseToken(): AnsiString;
-  var startPos: Integer;
-  begin
-    Result := '';
-    startPos := fPos;
-    while (fPos <= length(fSrc)) and (fSrc[fPos] in ['t', 'r', 'u', 'e', 'f', 'a', 'l', 's', 'n']) do inc(fPos);
-    Result := copy(fSrc, startPos, fPos-startPos);
-  end;
+//pair = str ":" val.
+procedure TJSON.parsePair();
+var
+  Name: TJSONString;
+  Val: TJSONValue;
+begin
+  Name := parseStr();
+  if checkChar(':', true) then begin
+    Val := TJSONValue.Create(fSrc, fPos);
+    fValues[Name] := Val;
+    fPos := Val.fEnd + Ord(fSrc[Val.fEnd] = JSON_QUOTE_CHAR);
 
-  // str = """text""".
-  function TJSONAnsi.parseStr(): AnsiString;
-  var startPos: Integer;
-  begin
-    result := '';
-    if checkChar('"', true) then begin
-      startPos := fPos;
-      while (fPos <= length(fSrc)) and (fSrc[fPos] <> '"') do inc(fPos);
-      if (fPos <= length(fSrc)) then begin
-        result := copy(fSrc, startPos, fPos-startPos);
-        Inc(fPos);                          // Skip closing '"'
-      end else
-        if Assigned(ErrorHandler) then errorHandler(TError.Create('unclosed string constant at ' + intToStrA(fPos)));
-    end else
-      if Assigned(ErrorHandler) then errorHandler(TError.Create('string expected at ' + intToStrA(fPos)));
-  end;
-
-  // val = str | num | "true" | "false" | "null" | rec | arr.
-  function TJSONAnsi.parseVal(): Boolean;
-  begin
-    Result := True;
-    skipSpace();
-    if (fPos <= length(fSrc)) then begin
-      case UpCase(fSrc[fPos]) of
-        '"': begin
-          fValues[fCount] := parseStr();
-          fValueTypes[fCount] := jvString;
-        end;
-        'T': begin
-          fValues[fCount] := parseToken();
-          if UpperCase(fValues[fCount]) <> 'TRUE' then
-            if Assigned(ErrorHandler) then errorHandler(TError.Create('"true" expected at ' + intToStrA(fPos)));
-          fValueTypes[fCount] := jvBoolean;
-        end;
-        'F': begin
-          fValues[fCount] := parseToken();
-          if UpperCase(fValues[fCount]) <> 'FALSE' then
-            if Assigned(ErrorHandler) then errorHandler(TError.Create('"false" expected at ' + intToStrA(fPos)));
-          fValueTypes[fCount] := jvBoolean;
-        end;
-        'N': begin
-          fValues[fCount] := parseToken();
-          if UpperCase(fValues[fCount]) <> 'NULL' then
-            if Assigned(ErrorHandler) then errorHandler(TError.Create('"null" expected at ' + intToStrA(fPos)));
-          fValues[fCount] := '';                                                   // set to "null" value
-          fValueTypes[fCount] := jvObject;
-        end;
-        '{': ;
-        '[': ;
-        else begin
-          fValues[fCount] := parseNum();
-          fValueTypes[fCount] := jvNumber;
-        end;
-      end;
-    end else begin
-      if Assigned(ErrorHandler) then errorHandler(TError.Create('value expected at ' + intToStrA(fPos)));
-    end;
-  end;
-
-  //pair = str ":" val.
-  function TJSONAnsi.parsePair(): Boolean;
-  begin
-    if fCount >= fCapacity  then SetCapacity(fCapacity * 2);
-    fNames[fCount] := parseStr();
-    if checkChar(':', true) then
-      Result := parseVal()
-    else
-      Result := false;
-
-    fProperties.Add(fNames[fCount], JSONToPropertyType[fValueTypes[fCount]], [], fValues[fCount], '');
+    if @fDataMethod <> nil then
+      fDataMethod(Self, Name, fValues[Name]);
 
     Inc(fCount);
   end;
-
-  //rec  = "{" [pair] [{"," pair}] "}".
-  procedure TJSONAnsi.doParse();
-  begin
-    fPos := 1;
-    if not checkChar('{', true) then Exit;
-    parsePair();
-    while checkChar(',', false) do parsePair();
-    checkChar('}', true);
-  end;
-
-  constructor TJSONAnsi.Create(const aSrc: TJSONString; aErrorHandler: TErrorHandler);
-  begin
-    fProperties := TProperties.Create();
-    fSrc := aSrc;
-    doParse();
-  end;
-
-  destructor TJSONAnsi.Destroy;
-  begin
-    FreeAndNil(fProperties);
-    inherited;
-  end;
-
-  function TJSONAnsi.getName(index: Integer): TJSONString;
-  begin
-    Result := fNames[index];
-  end;
-
-  function TJSONAnsi.getNameIndex(const name: TJSONString): Integer;
-  begin
-    Result := fCount-1;
-    while (Result >= 0) and (fNames[Result] <> name) do Dec(Result);
-  end;
-
-function TJSONAnsi.getValueByIndex(index: Integer): TJSONString;
-begin
-  Result := fValues[index];
 end;
 
-function TJSONAnsi.getValueTypeByIndex(index: Integer): TJSONValueType;
+//rec  = "{" [pair] [{"," pair}] "}".
+procedure TJSON.doParse();
 begin
-  Result := fValueTypes[index];
+  if not checkChar('{', true) then Exit;
+  parsePair();
+  while checkChar(',', false) do parsePair();
+  checkChar('}', true);
 end;
 
-procedure TJSONAnsi.setSource(const Value: TJSONString);
+
+procedure TJSON.DefDataDelegate(const Obj: TJSON; const Name: TJSONString; Value: TJSONValue);
 begin
-  fSrc := Value;
+end;
+
+procedure TJSON.ForEachDelegate(const key: _HashMapKeyType; const value: _HashMapValueType; Data: Pointer);
+begin
+  TJSONDataDelegate(Data^)(Self, key, value);
+end;
+
+constructor TJSON.Create(const aSrc: TJSONString; DataMethod: TJSONDataDelegate = nil);
+begin
+  CreateEx(aSrc, 1, DataMethod);
+end;
+
+constructor TJSON.CreateEx(const aSrc: TJSONString; aStart: Integer; DataMethod: TJSONDataDelegate);
+begin
+  fSrc := aSrc;
+  fPos := aStart;
+
+  if @DataMethod = nil then
+    fDataMethod := DataMethod
+  else
+    fDataMethod := DefDataDelegate;
+
+  fValues := TJSONNameValueHashMap.Create();
+
+  doParse();
+end;
+
+destructor TJSON.Destroy;
+begin
+  FreeAndNil(fValues);
+  inherited;
+end;
+
+function TJSON.GetNamesIterator: TJSONNamesIterator;
+begin
+  Result := fValues.GetKeyIterator();
+end;
+
+function TJSON.Contains(const Name: TJSONString): Boolean;
+begin
+  Result := fValues.ContainsKey(Name);
+end;
+
+procedure TJSON.ForEach(DataMethod: TJSONDataDelegate);
+begin
+  if @DataMethod = nil then Exit;
+  fValues.ForEach(ForEachDelegate, @@DataMethod);
+end;
+
+class procedure TJSON.setErrorHandler(AErrorHandler: TErrorHandler);
+begin
+  ErrorHandler := AErrorHandler;
 end;
 
 end.

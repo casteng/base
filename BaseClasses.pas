@@ -12,7 +12,7 @@ interface
 uses
   Logger,
   SysUtils,
-  BaseTypes, Basics, BaseStr, Models, BaseMsg, Props, BaseCompiler;
+  BaseTypes, Basics, BaseStr, json, Models, BaseMsg, Props, BaseCompiler;
 
 const
   // Maximum possible item state flags
@@ -527,6 +527,9 @@ type
     // Root of a hierarchy
     property Root: TRootItem read FRoot write SetRoot;
   end;
+
+  // Modifies or creates (if Item is nil) item with subitems from a JSON data string. Returns the item.
+  function SetupFromJSON(Item: TItem; const aSrc: TJSONString; Manager: TItemsManager): TItem;
 
   // Retuns a list of the specified classes
   function GetClassList(AClasses: array of TClass): TClassArray;
@@ -1324,7 +1327,9 @@ begin
 end;
 
 procedure TItem.SetProperties(Properties: TProperties);
-var i: Integer; NewState: TItemFlags;
+var
+  i: Integer;
+  NewState: TItemFlags;
 begin
   LinksParams[CurrentLinkParam].CurLinkIndex := 0;                                 // Object links number
   if Properties.Valid('Name') then Name := Properties['Name'];
@@ -2133,6 +2138,55 @@ end;
 
 procedure TSubsystem.SetProperties(Properties: TProperties);
 begin
+end;
+
+(*
+  1. Parse JSON data
+  2. Create item instance
+  3. Set properties
+  4. For object fields in JSON call CreateFromJSON
+*)
+function SetupFromJSON(Item: TItem; const aSrc: TJSONString; Manager: TItemsManager): TItem;
+var
+  Props: TProperties;
+  Iter: TJSONNamesIterator;
+  Name: TJSONString;
+  Value: TJSONValue;
+  PropVal: TPropertyValue;
+  ItemClass: CItem;
+  Child: TItem;
+begin
+  with CreateRefcountedContainer do begin
+    with TJSON.Create(aSrc) do begin
+      Props := TProperties.Create();
+      Container.AddObjects([this, Props]);
+
+      if not Assigned(Item) then
+        if This.Contains('Class') then begin
+          ItemClass := Manager.FindItemClass(This['Class'].asStr);
+          if Assigned(ItemClass) then
+            Item := ItemClass.Create(Manager);
+        end;
+
+      if Assigned(Item) then begin
+        Iter := This.GetNamesIterator();
+        while Iter.GoToNext do begin
+          Name := Iter.Current;
+          Value := This[Name];
+          if Value.ValueType = jvObject then begin
+            Child := SetupFromJSON(nil, Value.asStr, Manager);
+            if Child <> nil then Item.AddChild(Child);
+            PropVal := Child.Name;                            // Relative link
+          end else begin
+            PropVal := Value.asStr;
+          end;
+          Props.Add(Name, JSONToPropertyType[Value.ValueType], [], PropVal, '');
+        end;
+        Item.SetProperties(Props);
+      end;
+      Result := Item;
+    end;
+  end;
 end;
 
 initialization

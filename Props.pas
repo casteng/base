@@ -11,7 +11,7 @@ interface
 
 uses
   Logger,
-  BaseTypes, Basics, BaseStr;
+  BaseTypes, Basics, BaseStr, json;
 
 type TPropertyValueType = Integer;
 
@@ -19,7 +19,7 @@ const
   // Properties collection grow step
   PropsCapacityStep = 32;
   // File signature 
-  PropertiesFileSignature: TFileSignature  = 'PC00';
+  PropertiesFileSignature: TFileSignature = 'PC00';
     // Possible value types
   // No value
   vtNone = 0;
@@ -57,13 +57,15 @@ const
   // Boolean values enumeration
   OnOffEnum = 'Off' + StringDelimiter + 'On';
 
+  // For converting JSON to properties
+  JSONToPropertyType: array[TJSONValueType] of Integer=(vtString, vtDouble, vtBoolean, vtObjectLink, vtNone);
+
+
 type
   // Type for property names
   TPropertyName = AnsiString;
   // Type for property values
   TPropertyValue = AnsiString;
-  // Type for property pairs set (JSON)
-  TPropertyPairs = AnsiString;
   // Type of value
   TValueType = Integer;
   // Possible property options
@@ -105,6 +107,8 @@ type
     // Sets the value of the specified property
     procedure SetValueProc(const Name: TPropertyName; const Value: TPropertyValue);
     function GetTempIndex(Data: Pointer): Integer;
+
+    procedure JSONData(const Obj: TJSON; const Name: TJSONString; Value: TJSONValue);
   protected
     // Number of properties
     FTotalProperties: Integer;
@@ -134,6 +138,10 @@ type
     // This field becomes True with any change of properties or values
     Changed: Boolean;
 
+    // Create an empty instance
+    constructor Create(); overload;
+    // Creates an instance and fills it with name/value pairs from a JSON data
+    constructor Create(const jsonStr: TJSONString); overload;
     destructor Destroy; override;
 
     // Calls the <b>Action</b> delegate for each property
@@ -355,6 +363,11 @@ begin
             (Prop1.Enumeration = Prop2.Enumeration) and (Prop1.Description = Prop2.Description);
 end;
 
+procedure TProperties.JSONData(const Obj: TJSON; const Name: TJSONString; Value: TJSONValue);
+begin
+  Add(Name, JSONToPropertyType[Value.ValueType], [], Value.asStr, '');
+end;
+
 function TProperties.IsEqual(const Props: TProperties): Boolean;
 var i: Integer;
 begin
@@ -500,7 +513,7 @@ begin
   end;
 end;
 
-function TProperties.GetOptions(const Name: AnsiString): TPOptions;
+function TProperties.GetOptions(const Name: TPropertyName): TPOptions;
 // Returns options of property with given name
 var i: Integer;
 begin
@@ -508,7 +521,7 @@ begin
   if i > -1 then Result := Properties[i].Options else Result := [];
 end;
 
-function TProperties.Add(const AName: AnsiString; const AValueType: Integer; const AOptions: TPOptions; const AValue, AEnumeration: AnsiString; const ADescription: AnsiString = ''): Integer;
+function TProperties.Add(const AName: TPropertyName; const AValueType: Integer; const AOptions: TPOptions; const AValue, AEnumeration: AnsiString; const ADescription: AnsiString = ''): Integer;
 // Adds a new property into list
 // Returns index of the new property
 begin
@@ -533,19 +546,19 @@ begin
   Changed := True;
 end;
 
-function TProperties.AddEnumerated(const AName: AnsiString; const AOptions: TPOptions; AValue: Integer; const AEnumeration: AnsiString): Integer;
+function TProperties.AddEnumerated(const AName: TPropertyName; const AOptions: TPOptions; AValue: Integer; const AEnumeration: AnsiString): Integer;
 begin
   Result := Add(AName, vtEnumerated, AOptions, '', AEnumeration);
   // Set enumerated value to one from list using given value as index
   SetEnumeratedValueByIndex(Result, AValue);
 end;
 
-function TProperties.AddBinary(const AName: AnsiString; const AOptions: TPOptions; AData: Pointer; DataSize: Integer): Integer;
+function TProperties.AddBinary(const AName: TPropertyName; const AOptions: TPOptions; AData: Pointer; DataSize: Integer): Integer;
 begin
   Result := Add(AName, vtBinary, AOptions, IntToStrA(Cardinal(AData)), IntToStrA(DataSize));
 end;
 
-procedure TProperties.AddSetProperty(const Name: AnsiString; Value, VisibleMembers: TSet32; ValuesEnum: TAnsiStringArray; const ADescription: AnsiString);
+procedure TProperties.AddSetProperty(const Name: TPropertyName; Value, VisibleMembers: TSet32; ValuesEnum: TAnsiStringArray; const ADescription: AnsiString);
 var i: Integer; s: AnsiString; EmptySet: Boolean;
 begin
   s := '[';
@@ -564,7 +577,7 @@ begin
   Add(Name, vtString, [poReadonly], s, ADescription);
 end;
 
-function TProperties.SetSetProperty(const Name: AnsiString; var Res: TSet32; ValuesEnum: TAnsiStringArray): Boolean;
+function TProperties.SetSetProperty(const Name: TPropertyName; var Res: TSet32; ValuesEnum: TAnsiStringArray): Boolean;
 var i: Integer; NewSet: TSet32;
 begin
   NewSet := Res;
@@ -578,7 +591,7 @@ begin
   if Result then Res := NewSet;
 end;
 
-procedure TProperties.AddSetProperty(const Name: AnsiString; Value, VisibleMembers: TSet32; const ValuesEnum, ADescription: AnsiString);
+procedure TProperties.AddSetProperty(const Name: TPropertyName; Value, VisibleMembers: TSet32; const ValuesEnum, ADescription: TPropertyValue);
 var Enum: TAnsiStringArray;
 begin
   BaseStr.SplitA(ValuesEnum, StringDelimiter, Enum, True);
@@ -586,7 +599,7 @@ begin
   Enum := nil;
 end;
 
-function TProperties.SetSetProperty(const Name: AnsiString; var Res: TSet32; const ValuesEnum: AnsiString): Boolean;
+function TProperties.SetSetProperty(const Name: TPropertyName; var Res: TSet32; const ValuesEnum: TPropertyValue): Boolean;
 var Enum: TAnsiStringArray;
 begin
   BaseStr.SplitA(ValuesEnum, StringDelimiter, Enum, True);
@@ -908,6 +921,17 @@ begin
     FTempBuffers[i] := nil;
   end;
   Changed := True;
+end;
+
+constructor TProperties.Create;
+begin
+end;
+
+constructor TProperties.Create(const jsonStr: TJSONString);
+var J: TJSON;
+begin
+  J := TJSON.Create(jsonStr, JSONData);
+  J.Free();
 end;
 
 destructor TProperties.Destroy;

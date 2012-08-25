@@ -10,7 +10,7 @@ unit GenTestU;
 interface
 
 uses
-  Tester, SysUtils, Template, BaseTypes, Basics;
+  Tester, Logger, SysUtils, Template, BaseTypes, Basics;
 
 type
   // Key type of test map class
@@ -54,7 +54,7 @@ type
 
   TTestHash = class(TTestCollections)
   private
-    function ForPair(const Key: Integer; const Value: String; Data: Pointer): Boolean;
+    procedure ForPair(const Key: Integer; const Value: String; Data: Pointer);
   published
     procedure TestHasmMap();
   end;
@@ -74,6 +74,9 @@ type
   {$MESSAGE 'Instantiating TIntStrHashMap interface'}
   {$I gen_coll_hashmap.inc}
   TIntStrHashMap = class(_GenHashMap) end;
+  TIntStrHashMapKeyIterator = object(_GenHashMapKeyIterator) end;
+
+  TKeyArray = array of _HashMapKeyType;
 
   _VectorValueType = Integer;
   {$MESSAGE 'Instantiating TIntVector interface'}
@@ -103,7 +106,7 @@ var
 
 const
   TESTCOUNT = 1024*8*4;//*256;//*1000*10;
-  HashMapElCnt = 1024*8;
+  HashMapElCnt = 500;//1024*8;
   CollElCnt = 1024*8;
 //type TestData = Integer;
 
@@ -297,15 +300,20 @@ end;
 
 { TTestHash }
 
-function TTestHash.ForPair(const Key: Integer; const Value: String; Data: Pointer): Boolean;
+procedure TTestHash.ForPair(const Key: Integer; const Value: String; Data: Pointer);
 begin
 //  Writeln(Key, ' = ', Value);
   Assert(_Check((Key) = StrToInt(Value)), 'Value check in for each fail');
-  Result := True;
+  //SetLength(TKeyArray(Data^), Length(TKeyArray(Data^))+1);
+  //TKeyArray(Data^)[High(TKeyArray(Data^))] := Key;
 end;
 
 procedure TTestHash.TestHasmMap;
-var i, cnt, t: NativeInt; Map: TIntStrHashMap;
+var
+  i, cnt, t: NativeInt;
+  Map: TIntStrHashMap;
+  Iter: _GenHashMapKeyIterator;
+  Keys: TArray<Integer>;
 begin
   Map := TIntStrHashMap.Create(1);
 
@@ -319,9 +327,22 @@ begin
     Assert(_Check(Map.ContainsKey(t) and Map.ContainsValue(IntToStr(t))));
   end;
 
-  Map.ForEach(ForPair, nil);
+  Map.ForEach(ForPair, @Keys);
 
   Assert(_Check(Map.Count = cnt));
+
+  Iter := Map.GetKeyIterator();
+
+  Log('Iterator count: ' + IntToStr(Map.Count));
+
+  for i := 0 to Map.Count-1 do begin
+    Assert(_Check(Iter.HasNext), 'iterator HasNext() failed');
+    t := Iter.Next;
+    Assert(_Check(Map.ContainsKey(t)), 'iterator value not found');
+    Log('Iterator next: ' + IntToStr(t));
+  end;
+
+  Assert(_Check(not Iter.HasNext), 'iterator HasNext() false positive');
 
   Map.Clear;
   Assert(_Check(Map.IsEmpty));

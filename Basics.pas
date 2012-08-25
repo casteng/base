@@ -90,7 +90,13 @@ type
 
   { @Abstract(Reference-counted container of temporary objects and memory buffers )
     Create an instance with @Link(CreateRefcountedContainer). The container can be used to accumulate temporary objects and buffers.
-    When no more references points to the container it destroys itself and all accumulated objects and buffers. }
+    When no more references points to the container it destroys itself and all accumulated objects and buffers.
+    Usage:
+    with CreateRefcountedContainer do begin
+      obj := TSomeObject.Create();
+      Container.AddObject(obj);
+    end;
+    The container and all added objects will be destroyed after the current routine execution (but not after "with" statement end). }
   IRefcountedContainer = interface
     // Adds an object instance
     function AddObject(Obj: TObject): TObject;
@@ -100,6 +106,10 @@ type
     procedure AddObjects(Objs: array of TObject);
     // Adds an array of memory buffers
     procedure AddPointers(Ptrs: array of Pointer);
+    // Returns self for use within "with" statement
+    function GetContainer(): IRefcountedContainer;
+    // Returns self for use within "with" statement
+    property Container: IRefcountedContainer read GetContainer;
   end;
 
   { @Abstract(Base class for streams)
@@ -476,6 +486,7 @@ type
     function AddPointer(Ptr: Pointer): Pointer;
     procedure AddObjects(Objs: array of TObject);
     procedure AddPointers(Ptrs: array of Pointer);
+    function GetContainer(): IRefcountedContainer;
   end;
 
 procedure SetFPUControlWord(MaskedExceptions: TFPUExceptionSet; EnableInterrupts: Boolean; Precision: TFPUPrecision; Rounding: TFPURounding; AffineInfinity: Boolean);
@@ -1073,6 +1084,11 @@ procedure TRefcountedContainer.AddPointers(Ptrs: array of Pointer);
 var i: Integer;
 begin
   for i := Low(Ptrs) to High(Ptrs) do AddPointer(Ptrs[i]);
+end;
+
+function TRefcountedContainer.GetContainer: IRefcountedContainer;
+begin
+  Result := Self;
 end;
 
 { TStream }

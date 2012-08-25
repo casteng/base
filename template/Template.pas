@@ -16,15 +16,16 @@ interface
     // sort data can be extremely quicksort-unfriendly
     soBadData = 1;
 
-    // data structure value can be nil
-    dsNullable = 0;
-    // data structure should perform range checking
-    dsRangeCheck = 1;
-
-    // data structure allow random access
-    dsRandomAccess = 2;
-
   type
+    // Data structure options set elements
+    TDataStructureOption = (// data structure value can be nil
+                            dsNullable,
+                            // data structure should perform range checking
+                            dsRangeCheck
+                            // data structure key is a string (to correctly select hash function)
+                            //dsStringKey
+                            );
+
     // Type for collection indexes, sizes etc
     __CollectionIndexType = Integer;
 
@@ -40,7 +41,7 @@ interface
 
     end;
 
-    // Implemets base interface for template classes
+    // Implements base interface for template classes
     TTemplateInterface = class(TObject, IInterface)
     protected
       function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult; {$IF (not defined(WINDOWS)) AND (FPC_FULLVERSION>=20501)}cdecl{$ELSE}stdcall{$IFEND};

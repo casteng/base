@@ -15,7 +15,7 @@ K=0
 L=1
 M=0
 N=1
-O=0
+O=1
 P=1
 Q=0
 R=0
@@ -90,11 +90,11 @@ MaxStackSize=1048576
 ImageBase=4194304
 ExeDescription=
 [Directories]
-OutputDir=bin
-UnitOutputDir=temp
+OutputDir=..\bin
+UnitOutputDir=..\temp
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=..;../../JCL/source/windows;..\..\JCL\source\include;../..\JCL\source\common;../template
+SearchPath=..\..;..\..\template
 Packages=vcl;rtl;vclx;vclactnband;vclshlctrls;vclie;xmlrtl;inetdbbde;inet;inetdbxpress;dbrtl;vcldb;adortl;bdertl;vcldbx;VclSmp;PNG_D7;VirtualTreesD7
 Conditionals=
 DebugSourceDirs=
@@ -127,3 +127,16 @@ z:\Delphi\Lite7\Bin\dcldb70.bpl=Borland Database Components
 z:\Delphi\Lite7\Bin\dclado70.bpl=Borland ADO DB Components
 z:\Delphi\Lite7\Bin\dclbde70.bpl=Borland BDE DB Components
 z:\Delphi\Lite7\Bin\dbx70.bpl=Borland SQL Explorer UI Package
+[HistoryLists\hlUnitAliases]
+Count=1
+Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
+[HistoryLists\hlSearchPath]
+Count=2
+Item0=..\..;..\..\template
+Item1=..\..
+[HistoryLists\hlUnitOutputDirectory]
+Count=1
+Item0=..\temp
+[HistoryLists\hlOutputDirectorry]
+Count=1
+Item0=..\bin

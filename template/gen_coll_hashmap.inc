@@ -47,7 +47,7 @@ Usage - once per unit:
   _HashMapPair = packed record Key: _HashMapKeyType; Value: _HashMapValueType; end;
 
   // Hash  map for each delegate
-  _HashMapDelegate = function(const key: _HashMapKeyType; const value: _HashMapValueType; Data: Pointer): Boolean of object;
+  _HashMapDelegate = procedure(const key: _HashMapKeyType; const value: _HashMapValueType; Data: Pointer) of object;
 
   // Data structure to store values of hash map
   _HashMapValueRec = packed record Count: __CollectionIndexType; Data: array of _HashMapPair; end;
@@ -55,11 +55,32 @@ Usage - once per unit:
   // Hash map keys collection type
   _HashMapKeys = array of _HashMapValueRec;
 
+  _GenHashMap = class;
+
+  (* Hash map keys forward iterator.
+     No map modification protection or early fail. *)
+  _GenHashMapKeyIterator = object
+  private
+    Map: _GenHashMap;
+    BktI, DataI: __CollectionIndexType;
+  public
+    // Advances the iterator to next item and returns True on success or False if no items left
+    function GoToNext(): Boolean;
+    // Returns current item performing no iterator state changes
+    function Current(): _HashMapKeyType; {$I inline.inc}
+    // Returns True if there is more items
+    function HasNext(): Boolean;
+    // Advances the iterator to next item and returns it
+    function Next(): _HashMapKeyType;
+  end;
+
   _GenHashMap = class
   {$IFDEF HAS_STRICT}strict{$ENDIF} private
     function GetLoadFactor(): Single;
-  {$IFDEF HAS_STRICT}strict{$ENDIF} protected
+
+  protected
     FValues: _HashMapKeys;
+  {$IFDEF HAS_STRICT}strict{$ENDIF} protected
     // Capacity of the hash map. Should be a power of 2.
     FCapacity,
     // Capacity mask
@@ -76,8 +97,11 @@ Usage - once per unit:
     procedure SetCapacity(ACapacity: __CollectionIndexType);
   public
     constructor Create(); overload;
+    // Create a map instance with the specified initial capacity
     constructor Create(Capacity: __CollectionIndexType); overload;
     destructor Destroy(); override;
+    // Returns a forward iterator over map keys collection
+    function GetKeyIterator(): _GenHashMapKeyIterator;
 
     // Returns True if the hash map contains the key
     function ContainsKey(const Key: _HashMapKeyType): Boolean; {$I inline.inc}
@@ -120,13 +144,87 @@ Usage - once per unit:
     const _HashMapDefaultCapacity = 16;
   {$IFEND}
 
+  { _GenHashMapKeyIterator }
+  function _GenHashMapKeyIterator.GoToNext(): Boolean;
+  begin
+    Result := False;
+    Inc(DataI);
+    while (BktI < Map.Capacity) and not Result do
+      if DataI < Map.FValues[BktI].Count then
+        Result := True
+      else begin
+        DataI := 0;
+        Inc(BktI);
+      end;
+  end;
+
+  function _GenHashMapKeyIterator.Current(): _HashMapKeyType;
+  begin
+    Result := Map.FValues[BktI].Data[DataI].Key;
+  end;
+
+  function _GenHashMapKeyIterator.HasNext(): Boolean;
+  var lDataI, lBktI: __CollectionIndexType;
+  begin
+    Result := False;
+    lDataI := DataI;
+    lBktI  := BktI;
+    Inc(lDataI);
+    while (lBktI < Map.Capacity) and not Result do
+      if lDataI < Map.FValues[lBktI].Count then
+        Result := True
+      else begin
+        lDataI := 0;
+        Inc(lBktI);
+      end;
+  end;
+
+  function _GenHashMapKeyIterator.Next(): _HashMapKeyType;
+  begin
+    if GoToNext then Result := Current;
+  end;
+
+  { _GenHashMap }
 
   {$IF not Declared(_HashMapHashFunc)}
-    function _HashMapHashFunc(Key: _HashMapKeyType): NativeUInt; {$I inline.inc}
-    const K = 0.6180339887; // (Sqrt(5) - 1) / 2
-    begin
-      Result := Trunc(maxint * (Frac(__CollectionIndexType(Key) * K)));
-    end;
+    function _HashMapHashFunc(const Key: Integer): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+
+    function _HashMapHashFunc(const Key: Pointer): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+
+    function _HashMapHashFunc(const Key: TObject): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+
+    function _HashMapHashFunc(const Key: TClass): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+
+    {$DEFINE Hash_Key_Float}
+    function _HashMapHashFunc(const Key: Single): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+    function _HashMapHashFunc(const Key: Double): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+    function _HashMapHashFunc(const Key: Extended): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+
+    {$DEFINE Hash_Key_String}
+    function _HashMapHashFunc(const Key: ShortString): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+    function _HashMapHashFunc(const Key: AnsiString): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+    function _HashMapHashFunc(const Key: WideString): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+    {$IFDEF UNICODE}
+      function _HashMapHashFunc(const Key: UnicodeString): NativeUInt; overload; {$I inline.inc}
+      {$I hash_funcs.inc}
+    {$ENDIF}
+
+    {$DEFINE Hash_Key_PChar}
+    function _HashMapHashFunc(Key: PAnsiChar): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
+
+    function _HashMapHashFunc(Key: PWideChar): NativeUInt; overload; {$I inline.inc}
+    {$I hash_funcs.inc}
   {$IFEND}
 
 
@@ -149,12 +247,13 @@ Usage - once per unit:
 
     if i < FValues[Index].Count then
       Result := FValues[Index].Data[i].Value
-    else
+    else begin
       {$IFDEF _HashMapTypeNullable}
         Result := nil;
       {$ELSE}
         Assert(False, 'Key not found');
       {$ENDIF}
+    end;
   end;
 
   procedure _GenHashMap.SetValue(const Key: _HashMapKeyType; const Value: _HashMapValueType);
@@ -220,6 +319,13 @@ Usage - once per unit:
     Clear;
     SetLength(FValues, 0);
     inherited;
+  end;
+
+  function _GenHashMap.GetKeyIterator(): _GenHashMapKeyIterator;
+  begin
+    Result.BktI  := 0;
+    Result.DataI := -1;
+    Result.Map   := Self;
   end;
 
   function _GenHashMap.ContainsKey(const Key: _HashMapKeyType): Boolean;

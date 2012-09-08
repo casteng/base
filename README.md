@@ -8,7 +8,7 @@ Contains classes and routines to provide:
  * generic collections
  * collision detection
  * generic sorting routines
- * croiss platform routines
+ * cross platform support routines
  * geometry routines
  * graphics routines
  * GUI library

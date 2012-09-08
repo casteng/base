@@ -597,7 +597,7 @@ begin
   Result.W := Length * Result.W;
 end;
 
-function NormalizeVector4s(const V: TVector4s; Length: Single = 1): TVector4s; overload;
+function NormalizeVector4s(const V: TVector4s; Length: Single = 1): TVector4s;
 var Sq: Single;
 begin
   Sq := Sqrt(sqr(V.X) + sqr(V.Y) + sqr(V.Z) + sqr(V.W));
